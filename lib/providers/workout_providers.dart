@@ -84,24 +84,4 @@ final recordsForDateProvider = FutureProvider.family<List<TrainingRecordData>, D
   return db.recordDao.getRecordsForDate(date);
 });
 
-// ─── 模板操作 ───
-
-final addTemplateExerciseProvider = FutureProvider.family.autoDispose<void, ({int day, String name})>(
-  (ref, params) async {
-    final db = ref.watch(databaseProvider);
-    await db.templateDao.addExercise(params.day, params.name);
-    ref.invalidate(templateProvider);
-    ref.invalidate(templateByDayProvider(params.day));
-    ref.invalidate(todayExercisesProvider);
-  },
-);
-
-final deleteTemplateExerciseProvider = FutureProvider.family.autoDispose<void, ({int day, String name})>(
-  (ref, params) async {
-    final db = ref.watch(databaseProvider);
-    await db.templateDao.deleteExercise(params.day, params.name);
-    ref.invalidate(templateProvider);
-    ref.invalidate(templateByDayProvider(params.day));
-    ref.invalidate(todayExercisesProvider);
-  },
-);
+// ─── 模板操作（直接在 UI 层调用 DAO，不走 provider 缓存）───

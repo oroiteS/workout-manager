@@ -66,14 +66,20 @@ class TemplateScreen extends ConsumerWidget {
                     ),
                   );
                   controller.dispose();
-                  if (name != null) {
-                    ref.invalidate(addTemplateExerciseProvider((day: day, name: name)));
-                    await ref.read(addTemplateExerciseProvider((day: day, name: name)).future);
+                  if (name != null && context.mounted) {
+                    final db = ref.read(databaseProvider);
+                    await db.templateDao.addExercise(day, name);
+                    ref.invalidate(templateProvider);
+                    ref.invalidate(templateByDayProvider(day));
+                    ref.invalidate(todayExercisesProvider);
                   }
                 },
                 onDelete: (name) async {
-                  ref.invalidate(deleteTemplateExerciseProvider((day: day, name: name)));
-                  await ref.read(deleteTemplateExerciseProvider((day: day, name: name)).future);
+                  final db = ref.read(databaseProvider);
+                  await db.templateDao.deleteExercise(day, name);
+                  ref.invalidate(templateProvider);
+                  ref.invalidate(templateByDayProvider(day));
+                  ref.invalidate(todayExercisesProvider);
                 },
               );
             },
