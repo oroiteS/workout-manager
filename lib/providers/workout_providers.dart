@@ -86,7 +86,7 @@ final recordsForDateProvider = FutureProvider.family<List<TrainingRecordData>, D
 
 // ─── 模板操作 ───
 
-final addTemplateExerciseProvider = FutureProvider.family<void, ({int day, String name})>(
+final addTemplateExerciseProvider = FutureProvider.family.autoDispose<void, ({int day, String name})>(
   (ref, params) async {
     final db = ref.watch(databaseProvider);
     await db.templateDao.addExercise(params.day, params.name);
@@ -96,7 +96,7 @@ final addTemplateExerciseProvider = FutureProvider.family<void, ({int day, Strin
   },
 );
 
-final deleteTemplateExerciseProvider = FutureProvider.family<void, ({int day, String name})>(
+final deleteTemplateExerciseProvider = FutureProvider.family.autoDispose<void, ({int day, String name})>(
   (ref, params) async {
     final db = ref.watch(databaseProvider);
     await db.templateDao.deleteExercise(params.day, params.name);
