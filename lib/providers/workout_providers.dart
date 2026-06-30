@@ -46,10 +46,12 @@ final saveRecordsProvider = FutureProvider.family<void, Map<String, double>>((re
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
   for (final entry in records.entries) {
-    await db.recordDao.insertRecord(entry.key, entry.value, now);
+    await db.recordDao.upsertRecord(entry.key, entry.value, now);
   }
   ref.invalidate(lastWeightsProvider);
   ref.invalidate(lastTrainedDateProvider);
+  ref.invalidate(exerciseHistoryProvider);
+  ref.invalidate(recordsGroupedByDateProvider);
 });
 
 // ─── 图表数据 ───
@@ -59,6 +61,20 @@ final exerciseHistoryProvider =
     FutureProvider.family<List<TrainingRecordData>, String>((ref, exerciseName) async {
   final db = ref.watch(databaseProvider);
   return db.recordDao.getHistory(exerciseName, limit: 20);
+});
+
+/// 删除训练记录
+final deleteRecordProvider = FutureProvider.family<void, int>((ref, id) async {
+  final db = ref.watch(databaseProvider);
+  await db.recordDao.deleteById(id);
+  ref.invalidate(exerciseHistoryProvider);
+  ref.invalidate(recordsGroupedByDateProvider);
+});
+
+/// 所有训练记录（按日期降序），用于历史记录页面
+final recordsGroupedByDateProvider = FutureProvider<List<TrainingRecordData>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.recordDao.getRecordsGroupedByDate(limit: 50);
 });
 
 // ─── 模板操作（mutation helpers） ───

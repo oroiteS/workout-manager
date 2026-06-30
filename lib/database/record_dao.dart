@@ -28,18 +28,44 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
     return result?.weight;
   }
 
-  Future<void> insertRecord(
+  Future<void> upsertRecord(
     String exerciseName,
     double weight,
     DateTime trainedAt,
-  ) {
-    return into(trainingRecord).insert(
-      TrainingRecordCompanion.insert(
-        exerciseName: exerciseName,
-        weight: weight,
-        trainedAt: trainedAt,
-      ),
-    );
+  ) async {
+    final startOfDay = DateTime(trainedAt.year, trainedAt.month, trainedAt.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final existing = await (select(trainingRecord)
+      ..where((t) =>
+          t.exerciseName.equals(exerciseName) &
+          t.trainedAt.isBiggerOrEqualValue(startOfDay) &
+          t.trainedAt.isSmallerThanValue(endOfDay)))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      await (update(trainingRecord) ..where((t) => t.id.equals(existing.id)))
+          .write(TrainingRecordCompanion(weight: Value(weight)));
+    } else {
+      await into(trainingRecord).insert(
+        TrainingRecordCompanion.insert(
+          exerciseName: exerciseName,
+          weight: weight,
+          trainedAt: trainedAt,
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteById(int id) async {
+    await (delete(trainingRecord) ..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<List<TrainingRecordData>> getRecordsGroupedByDate({int limit = 50}) {
+    return (select(trainingRecord)
+      ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
+      ..limit(limit))
+        .get();
   }
 
   Future<DateTime?> getLastTrainedAt(String exerciseName) async {
