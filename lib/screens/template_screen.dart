@@ -65,11 +65,14 @@ class TemplateScreen extends ConsumerWidget {
                       ],
                     ),
                   );
+                  controller.dispose();
                   if (name != null) {
+                    ref.invalidate(addTemplateExerciseProvider((day: day, name: name)));
                     await ref.read(addTemplateExerciseProvider((day: day, name: name)).future);
                   }
                 },
                 onDelete: (name) async {
+                  ref.invalidate(deleteTemplateExerciseProvider((day: day, name: name)));
                   await ref.read(deleteTemplateExerciseProvider((day: day, name: name)).future);
                 },
               );
