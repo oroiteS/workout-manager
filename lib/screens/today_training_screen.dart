@@ -36,6 +36,12 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
       appBar: AppBar(
         title: const Text('今日训练'),
         centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: Center(child: Text('v1.0.1', style: TextStyle(fontSize: 12, color: Colors.grey))),
+          ),
+        ],
       ),
       body: exercisesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

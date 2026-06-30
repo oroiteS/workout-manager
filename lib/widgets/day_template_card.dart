@@ -4,8 +4,8 @@ class DayTemplateCard extends StatelessWidget {
   final String dayLabel;
   final int dayOfWeek;
   final List<String> exercises;
-  final VoidCallback onAdd;
-  final ValueChanged<String> onDelete;
+  final Future<void> Function() onAdd;
+  final Future<void> Function(String) onDelete;
 
   const DayTemplateCard({
     super.key,
@@ -43,7 +43,7 @@ class DayTemplateCard extends StatelessWidget {
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline, size: 22),
-                  onPressed: onAdd,
+                  onPressed: () => onAdd(),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),

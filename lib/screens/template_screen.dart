@@ -17,6 +17,12 @@ class TemplateScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('周训练模板'),
         centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: Center(child: Text('v1.0.1', style: TextStyle(fontSize: 12, color: Colors.grey))),
+          ),
+        ],
       ),
       body: templateAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -66,20 +72,36 @@ class TemplateScreen extends ConsumerWidget {
                     ),
                   );
                   controller.dispose();
-                  if (name != null && context.mounted) {
-                    final db = ref.read(databaseProvider);
-                    await db.templateDao.addExercise(day, name);
-                    ref.invalidate(templateProvider);
-                    ref.invalidate(templateByDayProvider(day));
-                    ref.invalidate(todayExercisesProvider);
+                  if (name != null && name.isNotEmpty) {
+                    try {
+                      final db = ref.read(databaseProvider);
+                      await db.templateDao.addExercise(day, name);
+                      ref.invalidate(templateProvider);
+                      ref.invalidate(templateByDayProvider(day));
+                      ref.invalidate(todayExercisesProvider);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('添加失败: $e'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
                   }
                 },
                 onDelete: (name) async {
-                  final db = ref.read(databaseProvider);
-                  await db.templateDao.deleteExercise(day, name);
-                  ref.invalidate(templateProvider);
-                  ref.invalidate(templateByDayProvider(day));
-                  ref.invalidate(todayExercisesProvider);
+                  try {
+                    final db = ref.read(databaseProvider);
+                    await db.templateDao.deleteExercise(day, name);
+                    ref.invalidate(templateProvider);
+                    ref.invalidate(templateByDayProvider(day));
+                    ref.invalidate(todayExercisesProvider);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
                 },
               );
             },

@@ -24,7 +24,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final recordsAsync = ref.watch(recordsForDateProvider(_selectedDay));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('训练记录'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('训练记录'),
+        centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: Center(child: Text('v1.0.1', style: TextStyle(fontSize: 12, color: Colors.grey))),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // --- 日历 ---
