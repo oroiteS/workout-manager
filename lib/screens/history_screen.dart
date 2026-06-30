@@ -30,7 +30,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.0.3', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.0.4', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
@@ -232,6 +232,7 @@ class _RecordTile extends StatelessWidget {
           ],
         ),
         onTap: onTap,
+        onLongPress: onDelete,
         dense: true,
       ),
     );

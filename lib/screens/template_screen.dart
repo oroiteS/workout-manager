@@ -20,7 +20,7 @@ class TemplateScreen extends ConsumerWidget {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.0.3', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.0.4', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
