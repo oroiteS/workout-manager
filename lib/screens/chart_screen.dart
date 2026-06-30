@@ -18,6 +18,21 @@ class ChartScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('$exerciseName · 重量趋势'),
         centerTitle: true,
+        actions: [
+          Consumer(
+            builder: (_, ref, __) => IconButton(
+              icon: Icon(ref.watch(themeModeProvider) == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode, size: 20),
+              onPressed: () => ref.read(themeModeProvider.notifier).update(
+                (s) => s == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+              ),
+              tooltip: '切换主题',
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: Center(child: Text('v1.0.7', style: TextStyle(fontSize: 12, color: Colors.grey))),
+          ),
+        ],
       ),
       body: historyAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

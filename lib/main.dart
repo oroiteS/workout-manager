@@ -7,6 +7,7 @@ import 'package:workout_manager/screens/today_training_screen.dart';
 import 'package:workout_manager/screens/template_screen.dart';
 import 'package:workout_manager/screens/chart_screen.dart';
 import 'package:workout_manager/screens/history_screen.dart';
+import 'package:workout_manager/providers/workout_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,11 +15,12 @@ Future<void> main() async {
   runApp(const ProviderScope(child: WorkoutApp()));
 }
 
-class WorkoutApp extends StatelessWidget {
+class WorkoutApp extends ConsumerWidget {
   const WorkoutApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
       title: '训练记录',
       debugShowCheckedModeBanner: false,
@@ -32,6 +34,7 @@ class WorkoutApp extends StatelessWidget {
         Locale('en', 'US'),
       ],
       locale: const Locale('zh', 'CN'),
+      themeMode: themeMode,
       theme: ThemeData(
         colorSchemeSeed: Colors.blue,
         useMaterial3: true,

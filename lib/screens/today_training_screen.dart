@@ -36,10 +36,19 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
       appBar: AppBar(
         title: const Text('今日训练'),
         centerTitle: true,
-        actions: const [
-          Padding(
+        actions: [
+          Consumer(
+            builder: (_, ref, __) => IconButton(
+              icon: Icon(ref.watch(themeModeProvider) == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode, size: 20),
+              onPressed: () => ref.read(themeModeProvider.notifier).update(
+                (s) => s == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+              ),
+              tooltip: '切换主题',
+            ),
+          ),
+          const Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.0.6', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.0.7', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),

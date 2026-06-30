@@ -32,7 +32,7 @@ class DayTemplateCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: _isToday() ? Colors.blue : Colors.black87,
+                    color: _isToday() ? Colors.blue : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 if (_isToday())
@@ -53,7 +53,7 @@ class DayTemplateCard extends StatelessWidget {
             if (exercises.isEmpty)
               Text(
                 '暂无动作',
-                style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withAlpha(80)),
               )
             else
               Wrap(

@@ -1,5 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/database/database.dart';
+
+// ─── 主题 ───
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
 // ─── 数据库单例 ───
 final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase());
