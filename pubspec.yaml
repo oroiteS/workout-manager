@@ -1,7 +1,7 @@
 name: workout_manager
 description: 极简健身重量记录工具
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.2+3
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

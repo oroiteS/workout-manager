@@ -89,4 +89,16 @@ void main() {
     final all = await dao.getRecordsGroupedByDate();
     expect(all.length, 2);
   });
+
+  test('updateWeight 更新指定记录重量', () async {
+    final now = DateTime.now();
+    await dao.upsertRecord('胸推', 50.0, now);
+    final records = await dao.getRecordsGroupedByDate();
+    final id = records.first.id;
+
+    await dao.updateWeight(id, 75.0);
+    final updated = await dao.getHistory('胸推');
+    expect(updated.length, 1);
+    expect(updated.first.weight, 75.0);
+  });
 }

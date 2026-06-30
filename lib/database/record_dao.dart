@@ -67,6 +67,11 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
     }
   }
 
+  Future<void> updateWeight(int id, double weight) async {
+    await (update(trainingRecord) ..where((t) => t.id.equals(id)))
+        .write(TrainingRecordCompanion(weight: Value(weight)));
+  }
+
   Future<void> deleteById(int id) async {
     await (delete(trainingRecord) ..where((t) => t.id.equals(id))).go();
   }

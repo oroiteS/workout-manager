@@ -30,7 +30,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.0.1', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.0.2', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
@@ -109,6 +109,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     final r = records[index];
                     return _RecordTile(
                       record: r,
+                      onTap: () => _editRecord(r),
                       onDelete: () => _deleteRecord(r.id),
                     );
                   },
@@ -140,12 +141,61 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       ),
     );
   }
+
+  Future<void> _editRecord(TrainingRecordData record) async {
+    final controller = TextEditingController(text: record.weight.toString());
+    final newWeight = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('编辑：${record.exerciseName}'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            hintText: '输入新重量 (kg)',
+            border: OutlineInputBorder(),
+            suffixText: 'kg',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () {
+              final v = double.tryParse(controller.text.trim());
+              if (v != null && v > 0) Navigator.pop(ctx, v);
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (newWeight != null) {
+      try {
+        final db = ref.read(databaseProvider);
+        await db.recordDao.updateWeight(record.id, newWeight);
+        ref.invalidate(recordsForDateProvider);
+        ref.invalidate(recordsGroupedByDateProvider);
+        ref.invalidate(recordDatesProvider);
+        ref.invalidate(exerciseHistoryProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('更新失败: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
 }
 
 class _RecordTile extends StatelessWidget {
   final TrainingRecordData record;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
-  const _RecordTile({required this.record, required this.onDelete});
+  const _RecordTile({required this.record, required this.onTap, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -164,10 +214,22 @@ class _RecordTile extends StatelessWidget {
       },
       child: ListTile(
         title: Text(record.exerciseName),
-        trailing: Text(
-          '${record.weight} kg',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        subtitle: Text(
+          DateFormat('yyyy-MM-dd').format(record.trainedAt),
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
         ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${record.weight} kg',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+          ],
+        ),
+        onTap: onTap,
         dense: true,
       ),
     );
