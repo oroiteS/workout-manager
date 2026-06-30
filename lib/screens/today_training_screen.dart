@@ -13,10 +13,24 @@ class TodayTrainingScreen extends ConsumerStatefulWidget {
 
 class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
   final Map<String, double?> _weights = {};
+  bool _initialized = false;
 
   @override
   Widget build(BuildContext context) {
     final exercisesAsync = ref.watch(todayExercisesProvider);
+    final todayRecordsAsync = ref.watch(recordsGroupedByDateProvider);
+
+    // 预填今天已有的训练重量（仅首次加载）
+    if (!_initialized && todayRecordsAsync.hasValue) {
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      for (final r in todayRecordsAsync.value!) {
+        if (!r.trainedAt.isBefore(todayStart)) {
+          _weights.putIfAbsent(r.exerciseName, () => r.weight);
+        }
+      }
+      _initialized = true;
+    }
 
     return Scaffold(
       appBar: AppBar(

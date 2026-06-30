@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/screens/today_training_screen.dart';
 import 'package:workout_manager/screens/template_screen.dart';
 import 'package:workout_manager/screens/chart_screen.dart';
+import 'package:workout_manager/screens/history_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +56,7 @@ class _MainScreenState extends State<MainScreen> {
   final _screens = const [
     TodayTrainingScreen(),
     TemplateScreen(),
+    HistoryScreen(),
   ];
 
   @override
@@ -74,6 +76,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: '周模板',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: '记录',
           ),
         ],
       ),
