@@ -6,20 +6,17 @@ final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase());
 
 // ─── 今日训练 ───
 
-/// 今天该练的动作列表（从模板加载）
 final todayExercisesProvider = FutureProvider<List<WeekTemplateData>>((ref) async {
   final db = ref.watch(databaseProvider);
   final weekday = DateTime.now().weekday; // 1=Mon..7=Sun
   return db.templateDao.getByDay(weekday);
 });
 
-/// 每个动作的上次训练重量
 final lastWeightsProvider = FutureProvider.family<double?, String>((ref, exerciseName) async {
   final db = ref.watch(databaseProvider);
   return db.recordDao.getLastWeight(exerciseName);
 });
 
-/// 每个动作的上次训练日期
 final lastTrainedDateProvider = FutureProvider.family<DateTime?, String>((ref, exerciseName) async {
   final db = ref.watch(databaseProvider);
   return db.recordDao.getLastTrainedAt(exerciseName);
@@ -27,13 +24,11 @@ final lastTrainedDateProvider = FutureProvider.family<DateTime?, String>((ref, e
 
 // ─── 周模板 ───
 
-/// 全部 7 天的模板数据
 final templateProvider = FutureProvider<List<WeekTemplateData>>((ref) async {
   final db = ref.watch(databaseProvider);
   return db.templateDao.getAll();
 });
 
-/// 按天过滤的模板
 final templateByDayProvider = FutureProvider.family<List<WeekTemplateData>, int>((ref, day) async {
   final db = ref.watch(databaseProvider);
   return db.templateDao.getByDay(day);
@@ -41,7 +36,6 @@ final templateByDayProvider = FutureProvider.family<List<WeekTemplateData>, int>
 
 // ─── 训练记录 ───
 
-/// 保存训练记录
 final saveRecordsProvider = FutureProvider.family<void, Map<String, double>>((ref, records) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
@@ -52,34 +46,46 @@ final saveRecordsProvider = FutureProvider.family<void, Map<String, double>>((re
   ref.invalidate(lastTrainedDateProvider);
   ref.invalidate(exerciseHistoryProvider);
   ref.invalidate(recordsGroupedByDateProvider);
+  ref.invalidate(recordDatesProvider);
+  ref.invalidate(recordsForDateProvider);
+});
+
+final deleteRecordProvider = FutureProvider.family<void, int>((ref, id) async {
+  final db = ref.watch(databaseProvider);
+  await db.recordDao.deleteById(id);
+  ref.invalidate(exerciseHistoryProvider);
+  ref.invalidate(recordsGroupedByDateProvider);
+  ref.invalidate(recordDatesProvider);
+  ref.invalidate(recordsForDateProvider);
+});
+
+final recordsGroupedByDateProvider = FutureProvider<List<TrainingRecordData>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.recordDao.getRecordsGroupedByDate(limit: 50);
 });
 
 // ─── 图表数据 ───
 
-/// 单个动作的历史记录（用于趋势图）
 final exerciseHistoryProvider =
     FutureProvider.family<List<TrainingRecordData>, String>((ref, exerciseName) async {
   final db = ref.watch(databaseProvider);
   return db.recordDao.getHistory(exerciseName, limit: 20);
 });
 
-/// 删除训练记录
-final deleteRecordProvider = FutureProvider.family<void, int>((ref, id) async {
+// ─── 日历 ───
+
+final recordDatesProvider = FutureProvider<List<DateTime>>((ref) async {
   final db = ref.watch(databaseProvider);
-  await db.recordDao.deleteById(id);
-  ref.invalidate(exerciseHistoryProvider);
-  ref.invalidate(recordsGroupedByDateProvider);
+  return db.recordDao.getRecordDates();
 });
 
-/// 所有训练记录（按日期降序），用于历史记录页面
-final recordsGroupedByDateProvider = FutureProvider<List<TrainingRecordData>>((ref) async {
+final recordsForDateProvider = FutureProvider.family<List<TrainingRecordData>, DateTime>((ref, date) async {
   final db = ref.watch(databaseProvider);
-  return db.recordDao.getRecordsGroupedByDate(limit: 50);
+  return db.recordDao.getRecordsForDate(date);
 });
 
-// ─── 模板操作（mutation helpers） ───
+// ─── 模板操作 ───
 
-/// 添加模板动作
 final addTemplateExerciseProvider = FutureProvider.family<void, ({int day, String name})>(
   (ref, params) async {
     final db = ref.watch(databaseProvider);
@@ -90,7 +96,6 @@ final addTemplateExerciseProvider = FutureProvider.family<void, ({int day, Strin
   },
 );
 
-/// 删除模板动作
 final deleteTemplateExerciseProvider = FutureProvider.family<void, ({int day, String name})>(
   (ref, params) async {
     final db = ref.watch(databaseProvider);

@@ -2,76 +2,117 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:workout_manager/database/database.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
 
-class HistoryScreen extends ConsumerWidget {
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recordsAsync = ref.watch(recordsGroupedByDateProvider);
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now();
+  final _calendarFormat = CalendarFormat.month;
+
+  @override
+  Widget build(BuildContext context) {
+    final recordDatesAsync = ref.watch(recordDatesProvider);
+    final recordsAsync = ref.watch(recordsForDateProvider(_selectedDay));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('训练记录'),
-        centerTitle: true,
-      ),
-      body: recordsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: $e')),
-        data: (records) {
-          if (records.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text('暂无训练记录', style: TextStyle(fontSize: 16, color: Colors.grey[500])),
-                ],
-              ),
-            );
-          }
+      appBar: AppBar(title: const Text('训练记录'), centerTitle: true),
+      body: Column(
+        children: [
+          // --- 日历 ---
+          recordDatesAsync.when(
+            loading: () => const SizedBox(height: 340, child: Center(child: CircularProgressIndicator())),
+            error: (e, _) => const SizedBox(height: 340, child: Center(child: Text('加载失败'))),
+            data: (recordDates) {
+              final eventDays = recordDates
+                  .map((d) => DateTime(d.year, d.month, d.day))
+                  .toSet();
 
-          final items = _buildItems(records);
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              if (item is _DateHeaderItem) {
-                return _DateHeader(date: item.date);
-              }
-              return _RecordRow(
-                record: (item as _RecordRowItem).record,
-                onDelete: () => _deleteRecord(context, ref, (item).record.id),
+              return TableCalendar(
+                firstDay: DateTime(2026, 1, 1),
+                lastDay: DateTime.now(),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                calendarFormat: _calendarFormat,
+                availableCalendarFormats: const {CalendarFormat.month: '月'},
+                eventLoader: (day) {
+                  return eventDays.contains(DateTime(day.year, day.month, day.day)) ? [true] : [];
+                },
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                onPageChanged: (focusedDay) {
+                  _focusedDay = focusedDay;
+                },
+                calendarStyle: CalendarStyle(
+                  todayDecoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withAlpha(50),
+                    shape: BoxShape.circle,
+                  ),
+                  selectedDecoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  markerDecoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary.withAlpha(180),
+                    shape: BoxShape.circle,
+                  ),
+                  markersMaxCount: 1,
+                ),
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                ),
+                locale: 'zh_CN',
               );
             },
-          );
-        },
+          ),
+          const Divider(height: 1),
+          // --- 当天记录 ---
+          Expanded(
+            child: recordsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('加载失败: $e')),
+              data: (records) {
+                if (records.isEmpty) {
+                  return Center(
+                    child: Text(
+                      '${DateFormat('M月d日').format(_selectedDay)} 无训练记录',
+                      style: TextStyle(fontSize: 15, color: Colors.grey[500]),
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: records.length,
+                  itemBuilder: (context, index) {
+                    final r = records[index];
+                    return _RecordTile(
+                      record: r,
+                      onDelete: () => _deleteRecord(r.id),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  List<_HistoryItem> _buildItems(List<TrainingRecordData> records) {
-    final items = <_HistoryItem>[];
-    String? lastDateKey;
-
-    for (final r in records) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(r.trainedAt);
-      if (dateKey != lastDateKey) {
-        items.add(_DateHeaderItem(date: r.trainedAt));
-        lastDateKey = dateKey;
-      }
-      items.add(_RecordRowItem(record: r));
-    }
-
-    return items;
-  }
-
-  void _deleteRecord(BuildContext context, WidgetRef ref, int id) {
+  void _deleteRecord(int id) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -92,49 +133,15 @@ class HistoryScreen extends ConsumerWidget {
   }
 }
 
-// --- item types ---
-sealed class _HistoryItem {}
-class _DateHeaderItem extends _HistoryItem {
-  final DateTime date;
-  _DateHeaderItem({required this.date});
-}
-class _RecordRowItem extends _HistoryItem {
-  final TrainingRecordData record;
-  _RecordRowItem({required this.record});
-}
-
-// --- widgets ---
-
-class _DateHeader extends StatelessWidget {
-  final DateTime date;
-  const _DateHeader({required this.date});
-
-  @override
-  Widget build(BuildContext context) {
-    final dayStr = DateFormat('M月d日 EEEE', 'zh_CN').format(date);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        dayStr,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
-    );
-  }
-}
-
-class _RecordRow extends StatelessWidget {
+class _RecordTile extends StatelessWidget {
   final TrainingRecordData record;
   final VoidCallback onDelete;
-  const _RecordRow({required this.record, required this.onDelete});
+  const _RecordTile({required this.record, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     return Dismissible(
-      key: Key('record-${record.id}'),
+      key: Key('rec-${record.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -144,7 +151,7 @@ class _RecordRow extends StatelessWidget {
       ),
       confirmDismiss: (_) async {
         onDelete();
-        return false; // we handle deletion with dialog
+        return false;
       },
       child: ListTile(
         title: Text(record.exerciseName),

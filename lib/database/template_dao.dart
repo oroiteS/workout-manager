@@ -24,7 +24,7 @@ class TemplateDao extends DatabaseAccessor<AppDatabase> with _$TemplateDaoMixin 
         dayOfWeek: dayOfWeek,
         exerciseName: exerciseName,
       ),
-      mode: InsertMode.insertOrIgnore,
+      mode: InsertMode.insertOrReplace,
     );
   }
 

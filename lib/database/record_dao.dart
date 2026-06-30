@@ -28,6 +28,16 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
     return result?.weight;
   }
 
+  Future<DateTime?> getLastTrainedAt(String exerciseName) async {
+    final query = select(trainingRecord)
+      ..where((t) => t.exerciseName.equals(exerciseName))
+      ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
+      ..limit(1);
+
+    final result = await query.getSingleOrNull();
+    return result?.trainedAt;
+  }
+
   Future<void> upsertRecord(
     String exerciseName,
     double weight,
@@ -68,13 +78,33 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
         .get();
   }
 
-  Future<DateTime?> getLastTrainedAt(String exerciseName) async {
-    final query = select(trainingRecord)
-      ..where((t) => t.exerciseName.equals(exerciseName))
-      ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
-      ..limit(1);
+  Future<List<TrainingRecordData>> getRecordsForDate(DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    return (select(trainingRecord)
+      ..where((t) =>
+          t.trainedAt.isBiggerOrEqualValue(startOfDay) &
+          t.trainedAt.isSmallerThanValue(endOfDay))
+      ..orderBy([(t) => OrderingTerm(expression: t.exerciseName)]))
+      .get();
+  }
 
-    final result = await query.getSingleOrNull();
-    return result?.trainedAt;
+  /// 获取有训练记录的所有日期（去重），用于日历标记
+  Future<List<DateTime>> getRecordDates() async {
+    final all = await (select(trainingRecord)
+      ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)]))
+      .get();
+
+    final seen = <String>{};
+    final result = <DateTime>[];
+    for (final r in all) {
+      final d = r.trainedAt;
+      final key = '${d.year}-${d.month}-${d.day}';
+      if (!seen.contains(key)) {
+        seen.add(key);
+        result.add(DateTime(d.year, d.month, d.day));
+      }
+    }
+    return result;
   }
 }
