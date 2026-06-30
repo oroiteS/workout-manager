@@ -30,7 +30,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.0.2', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.0.3', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
@@ -180,6 +180,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ref.invalidate(recordsGroupedByDateProvider);
         ref.invalidate(recordDatesProvider);
         ref.invalidate(exerciseHistoryProvider);
+        ref.invalidate(lastWeightsProvider(record.exerciseName));
+        ref.invalidate(lastTrainedDateProvider(record.exerciseName));
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
