@@ -1,4 +1,5 @@
 // lib/screens/chart_screen.dart
+import 'dart:math' as m;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -31,70 +32,109 @@ class ChartScreen extends ConsumerWidget {
             );
           }
 
-          // Reverse: earliest first (chart goes left to right)
+          // earliest first
           final sorted = history.reversed.toList();
+
+          // use days since first record as x, not array index
+          final firstDay = _dateOnly(sorted.first.trainedAt);
           final spots = <FlSpot>[];
-          for (var i = 0; i < sorted.length; i++) {
-            spots.add(FlSpot(i.toDouble(), sorted[i].weight));
+          for (final r in sorted) {
+            final dayOffset =
+                _dateOnly(r.trainedAt).difference(firstDay).inDays.toDouble();
+            spots.add(FlSpot(dayOffset, r.weight));
           }
 
-          // Calculate change
+          // y-axis: dynamic range with padding
+          final weights = sorted.map((s) => s.weight);
+          final minW = weights.reduce(m.min);
+          final maxW = weights.reduce(m.max);
+          final margin = m.max((maxW - minW) * 0.15, 2.5);
+          final yMin = (minW - margin).floorToDouble();
+          final yMax = (maxW + margin).ceilToDouble();
+
+          // y interval: ~5 grid lines
+          final yInterval = _niceInterval(yMin, yMax);
+
+          // Change summary
           final first = sorted.first.weight;
           final last = sorted.last.weight;
           final change = last - first;
           final isUp = change > 0;
           final isDown = change < 0;
 
+          final lastDay = _dateOnly(sorted.last.trainedAt);
+
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Chart
                 Expanded(
                   flex: 3,
                   child: LineChart(
                     LineChartData(
-                      gridData: const FlGridData(show: true),
+                      minY: yMin,
+                      maxY: yMax,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: yInterval,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color: Colors.grey.withAlpha(40),
+                          strokeWidth: 1,
+                        ),
+                      ),
                       titlesData: FlTitlesData(
                         bottomTitles: AxisTitles(
+                          axisNameWidget: const Text('日期', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                          axisNameSize: 16,
                           sideTitles: SideTitles(
                             showTitles: true,
+                            interval: _calcXInterval(firstDay, lastDay),
+                            reservedSize: 28,
                             getTitlesWidget: (value, meta) {
                               final idx = value.toInt();
-                              if (idx >= 0 && idx < sorted.length) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    DateFormat('M/d').format(sorted[idx].trainedAt),
-                                    style: const TextStyle(fontSize: 9),
-                                  ),
-                                );
-                              }
-                              return const Text('');
+                              // map day offset back to date
+                              final date = firstDay.add(Duration(days: idx));
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  DateFormat('M/d').format(date),
+                                  style: const TextStyle(fontSize: 9, color: Colors.grey),
+                                ),
+                              );
                             },
-                            reservedSize: 22,
                           ),
                         ),
                         leftTitles: AxisTitles(
+                          axisNameWidget: const Text('kg', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                          axisNameSize: 16,
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                '${value.toInt()}',
-                                style: const TextStyle(fontSize: 10),
-                              );
-                            },
+                            interval: yInterval,
+                            reservedSize: 48,
+                            getTitlesWidget: (value, meta) => Text(
+                              value == value.roundToDouble()
+                                  ? '${value.toInt()}'
+                                  : value.toStringAsFixed(1),
+                              style: const TextStyle(fontSize: 10, color: Colors.grey),
+                            ),
                           ),
                         ),
                         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
-                      borderData: FlBorderData(show: true),
+                      borderData: FlBorderData(
+                        show: true,
+                        border: Border(
+                          left: BorderSide(color: Colors.grey.withAlpha(80)),
+                          bottom: BorderSide(color: Colors.grey.withAlpha(80)),
+                        ),
+                      ),
                       lineBarsData: [
                         LineChartBarData(
                           spots: spots,
                           isCurved: true,
+                          curveSmoothness: 0.2,
                           color: Colors.blue,
                           barWidth: 2.5,
                           dotData: FlDotData(
@@ -104,7 +144,7 @@ class ChartScreen extends ConsumerWidget {
                           ),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: Colors.blue.withAlpha(30),
+                            color: Colors.blue.withAlpha(25),
                           ),
                         ),
                       ],
@@ -112,8 +152,8 @@ class ChartScreen extends ConsumerWidget {
                         touchTooltipData: LineTouchTooltipData(
                           getTooltipItems: (spots) => spots
                               .map((s) => LineTooltipItem(
-                                    '${s.y} kg',
-                                    const TextStyle(color: Colors.white, fontSize: 12),
+                                    '${s.y.toStringAsFixed(1)} kg',
+                                    const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                                   ))
                               .toList(),
                         ),
@@ -122,7 +162,6 @@ class ChartScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Change summary
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -138,7 +177,7 @@ class ChartScreen extends ConsumerWidget {
                     children: [
                       Text(
                         isUp
-                            ? '📈 增长了 ${change.toStringAsFixed(1)}kg！'
+                            ? '📈 增长了 ${change.toStringAsFixed(1)}kg'
                             : isDown
                                 ? '📉 下降了 ${(-change).toStringAsFixed(1)}kg'
                                 : '➡️ 重量保持不变',
@@ -167,4 +206,27 @@ class ChartScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+/// calculate a nice round interval for y-axis (e.g. 2.5, 5, 10)
+double _niceInterval(double min, double max) {
+  final rough = (max - min) / 5;
+  if (rough <= 0.5) return 0.5;
+  if (rough <= 1) return 1;
+  if (rough <= 2) return 2;
+  if (rough <= 2.5) return 2.5;
+  if (rough <= 5) return 5;
+  if (rough <= 10) return 10;
+  if (rough <= 25) return 25;
+  return ((rough / 10).ceil() * 10).toDouble();
+}
+
+// x-axis: at most ~7 ticks
+double _calcXInterval(DateTime firstDay, DateTime lastDay) {
+  final totalDays = lastDay.difference(firstDay).inDays;
+  if (totalDays <= 0) return 1;
+  final ideal = totalDays / 6;
+  return ideal <= 1 ? 1 : ideal.ceilToDouble();
 }
