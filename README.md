@@ -1,4 +1,4 @@
-# workout_manager_tmp
+# Workout Manager — 极简健身重量记录
 
 A new Flutter project.
 
