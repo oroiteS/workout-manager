@@ -1,6 +1,6 @@
 {
-    "name": "workout_manager_tmp",
-    "short_name": "workout_manager_tmp",
+    "name": "workout_manager",
+    "short_name": "workout_manager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

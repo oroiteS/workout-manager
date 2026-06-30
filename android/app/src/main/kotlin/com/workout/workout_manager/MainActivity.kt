@@ -1,4 +1,4 @@
-package com.workout.workout_manager_tmp
+package com.workout.workout_manager
 
 import io.flutter.embedding.android.FlutterActivity
 
