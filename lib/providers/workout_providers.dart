@@ -84,4 +84,22 @@ final recordsForDateProvider = FutureProvider.family<List<TrainingRecordData>, D
   return db.recordDao.getRecordsForDate(date);
 });
 
+// ─── 补录历史记录 ───
+
+final saveRecordsForDateProvider =
+    FutureProvider.family<void, ({DateTime date, Map<String, double> records})>(
+  (ref, params) async {
+    final db = ref.watch(databaseProvider);
+    for (final entry in params.records.entries) {
+      await db.recordDao.upsertRecord(entry.key, entry.value, params.date);
+    }
+    ref.invalidate(lastWeightsProvider);
+    ref.invalidate(lastTrainedDateProvider);
+    ref.invalidate(exerciseHistoryProvider);
+    ref.invalidate(recordsGroupedByDateProvider);
+    ref.invalidate(recordDatesProvider);
+    ref.invalidate(recordsForDateProvider);
+  },
+);
+
 // ─── 模板操作（直接在 UI 层调用 DAO，不走 provider 缓存）───

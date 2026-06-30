@@ -23,6 +23,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final recordDatesAsync = ref.watch(recordDatesProvider);
     final recordsAsync = ref.watch(recordsForDateProvider(_selectedDay));
 
+    final isPastOrToday = !_selectedDay.isAfter(DateTime.now());
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('训练记录'),
@@ -30,10 +32,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.0.4', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.0.5', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
+      floatingActionButton: isPastOrToday
+          ? FloatingActionButton.extended(
+              onPressed: () => _retroAddRecords(),
+              icon: const Icon(Icons.add),
+              label: const Text('补录训练'),
+            )
+          : null,
       body: Column(
         children: [
           // --- 日历 ---
@@ -125,15 +134,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   void _deleteRecord(int id) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('删除记录'),
         content: const Text('确定要删除这条训练记录吗？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('取消')),
           FilledButton(
             onPressed: () {
               ref.read(deleteRecordProvider(id));
-              Navigator.pop(ctx);
+              Navigator.pop(dialogCtx);
             },
             child: const Text('删除'),
           ),
@@ -142,11 +151,94 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
+  Future<void> _retroAddRecords() async {
+    final ctx = context;
+    final templateExercises = await ref.read(templateByDayProvider(_selectedDay.weekday).future);
+    if (templateExercises.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('${DateFormat('M月d日 EEEE', 'zh_CN').format(_selectedDay)} 的模板没有动作，请先去「周模板」添加')),
+        );
+      }
+      return;
+    }
+
+    final controllers = <String, TextEditingController>{};
+    for (final t in templateExercises) {
+      controllers[t.exerciseName] = TextEditingController();
+    }
+
+    final result = await showDialog<Map<String, double>>(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text('补录：${DateFormat('M月d日 EEEE', 'zh_CN').format(_selectedDay)}'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: templateExercises.map((t) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: TextField(
+                  controller: controllers[t.exerciseName],
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: t.exerciseName,
+                    hintText: '重量 (kg)，留空则跳过',
+                    border: const OutlineInputBorder(),
+                    suffixText: 'kg',
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () {
+              final records = <String, double>{};
+              for (final t in templateExercises) {
+                final v = double.tryParse(controllers[t.exerciseName]!.text.trim());
+                if (v != null && v > 0) {
+                  records[t.exerciseName] = v;
+                }
+              }
+              Navigator.pop(ctx, records);
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    for (final c in controllers.values) {
+      c.dispose();
+    }
+
+    if (result != null && result.isNotEmpty) {
+      try {
+        await ref.read(saveRecordsForDateProvider((date: _selectedDay, records: result)).future);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('已补录 ${result.length} 个动作到 ${DateFormat('M月d日').format(_selectedDay)}')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('补录失败: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _editRecord(TrainingRecordData record) async {
     final controller = TextEditingController(text: record.weight.toString());
     final newWeight = await showDialog<double>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: Text('编辑：${record.exerciseName}'),
         content: TextField(
           controller: controller,
@@ -159,11 +251,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('取消')),
           FilledButton(
             onPressed: () {
               final v = double.tryParse(controller.text.trim());
-              if (v != null && v > 0) Navigator.pop(ctx, v);
+              if (v != null && v > 0) Navigator.pop(dialogCtx, v);
             },
             child: const Text('保存'),
           ),
