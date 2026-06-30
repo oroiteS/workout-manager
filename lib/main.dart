@@ -1,13 +1,15 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:workout_manager/screens/today_training_screen.dart';
 import 'package:workout_manager/screens/template_screen.dart';
 import 'package:workout_manager/screens/chart_screen.dart';
 import 'package:workout_manager/screens/history_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('zh_CN');
   runApp(const ProviderScope(child: WorkoutApp()));
 }
 
