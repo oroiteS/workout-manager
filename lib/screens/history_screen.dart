@@ -1,4 +1,3 @@
-// lib/screens/history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -54,7 +53,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           : null,
       body: Column(
         children: [
-          // --- 日历 ---
           recordDatesAsync.when(
             loading: () => const SizedBox(height: 340, child: Center(child: CircularProgressIndicator())),
             error: (e, _) => const SizedBox(height: 340, child: Center(child: Text('加载失败'))),
@@ -106,7 +104,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             },
           ),
           const Divider(height: 1),
-          // --- 当天记录 ---
           Expanded(
             child: recordsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -172,12 +169,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       return;
     }
 
-    final controllers = <String, TextEditingController>{};
+    final controllers = <int, TextEditingController>{};
     for (final t in templateExercises) {
-      controllers[t.exerciseName] = TextEditingController();
+      controllers[t.exerciseId] = TextEditingController();
     }
 
-    final result = await showDialog<Map<String, double>>(
+    final result = await showDialog<Map<int, ({String name, double weight})>>(
       context: ctx,
       builder: (dialogCtx) => AlertDialog(
         title: Text('补录：${DateFormat('M月d日 EEEE', 'zh_CN').format(_selectedDay)}'),
@@ -189,7 +186,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: TextField(
-                  controller: controllers[t.exerciseName],
+                  controller: controllers[t.exerciseId],
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: t.exerciseName,
@@ -206,11 +203,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('取消')),
           FilledButton(
             onPressed: () {
-              final records = <String, double>{};
+              final records = <int, ({String name, double weight})>{};
               for (final t in templateExercises) {
-                final v = double.tryParse(controllers[t.exerciseName]!.text.trim());
+                final v = double.tryParse(controllers[t.exerciseId]!.text.trim());
                 if (v != null && v > 0) {
-                  records[t.exerciseName] = v;
+                  records[t.exerciseId] = (name: t.exerciseName, weight: v);
                 }
               }
               Navigator.pop(ctx, records);
@@ -281,8 +278,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ref.invalidate(recordsGroupedByDateProvider);
         ref.invalidate(recordDatesProvider);
         ref.invalidate(exerciseHistoryProvider);
-        ref.invalidate(lastWeightsProvider(record.exerciseName));
-        ref.invalidate(lastTrainedDateProvider(record.exerciseName));
+        ref.invalidate(lastWeightsProvider(record.exerciseId));
+        ref.invalidate(lastTrainedDateProvider(record.exerciseId));
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
