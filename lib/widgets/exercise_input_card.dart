@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class ExerciseInputCard extends StatelessWidget {
+  final int exerciseId;
   final String exerciseName;
   final double? lastWeight;
   final DateTime? lastDate;
@@ -10,6 +11,7 @@ class ExerciseInputCard extends StatelessWidget {
 
   const ExerciseInputCard({
     super.key,
+    required this.exerciseId,
     required this.exerciseName,
     required this.lastWeight,
     required this.lastDate,
@@ -29,7 +31,7 @@ class ExerciseInputCard extends StatelessWidget {
               onTap: () => Navigator.pushNamed(
                 context,
                 '/chart',
-                arguments: exerciseName,
+                arguments: (exerciseId: exerciseId, exerciseName: exerciseName),
               ),
               child: Row(
                 children: [

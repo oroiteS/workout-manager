@@ -12,7 +12,7 @@ class TodayTrainingScreen extends ConsumerStatefulWidget {
 }
 
 class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
-  final Map<String, double?> _weights = {};
+  final Map<int, double?> _weights = {};
   bool _initialized = false;
 
   @override
@@ -20,13 +20,12 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
     final exercisesAsync = ref.watch(todayExercisesProvider);
     final todayRecordsAsync = ref.watch(recordsGroupedByDateProvider);
 
-    // 预填今天已有的训练重量（仅首次加载）
     if (!_initialized && todayRecordsAsync.hasValue) {
       final today = DateTime.now();
       final todayStart = DateTime(today.year, today.month, today.day);
       for (final r in todayRecordsAsync.value!) {
         if (!r.trainedAt.isBefore(todayStart)) {
-          _weights.putIfAbsent(r.exerciseName, () => r.weight);
+          _weights.putIfAbsent(r.exerciseId, () => r.weight);
         }
       }
       _initialized = true;
@@ -86,8 +85,9 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
                   itemBuilder: (context, index) {
                     final exercise = exercises[index];
                     return _ExerciseRow(
+                      exerciseId: exercise.exerciseId,
                       exerciseName: exercise.exerciseName,
-                      onWeightChanged: (v) => _weights[exercise.exerciseName] = v,
+                      onWeightChanged: (v) => _weights[exercise.exerciseId] = v,
                     );
                   },
                 ),
@@ -113,12 +113,15 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
   }
 
   Future<void> _saveRecords() async {
-    final validRecords = <String, double>{};
-    _weights.forEach((name, weight) {
+    final exercises = ref.read(todayExercisesProvider).valueOrNull ?? [];
+
+    final validRecords = <int, ({String name, double weight})>{};
+    for (final ex in exercises) {
+      final weight = _weights[ex.exerciseId];
       if (weight != null && weight > 0) {
-        validRecords[name] = weight;
+        validRecords[ex.exerciseId] = (name: ex.exerciseName, weight: weight);
       }
-    });
+    }
 
     if (validRecords.isEmpty) {
       if (mounted) {
@@ -132,7 +135,7 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
     await ref.read(saveRecordsProvider(validRecords).future);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已保存 ✅')),
+        const SnackBar(content: Text('已保存')),
       );
       ref.invalidate(todayExercisesProvider);
       _weights.clear();
@@ -140,22 +143,24 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
   }
 }
 
-/// 单个动作行 — 从 provider 查上次重量
 class _ExerciseRow extends ConsumerWidget {
+  final int exerciseId;
   final String exerciseName;
   final ValueChanged<double?> onWeightChanged;
 
   const _ExerciseRow({
+    required this.exerciseId,
     required this.exerciseName,
     required this.onWeightChanged,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lastWeightAsync = ref.watch(lastWeightsProvider(exerciseName));
-    final lastDateAsync = ref.watch(lastTrainedDateProvider(exerciseName));
+    final lastWeightAsync = ref.watch(lastWeightsProvider(exerciseId));
+    final lastDateAsync = ref.watch(lastTrainedDateProvider(exerciseId));
 
     return ExerciseInputCard(
+      exerciseId: exerciseId,
       exerciseName: exerciseName,
       lastWeight: lastWeightAsync.valueOrNull,
       lastDate: lastDateAsync.valueOrNull,
