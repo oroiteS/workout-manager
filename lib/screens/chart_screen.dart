@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:workout_manager/database/database.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
 
 class ChartScreen extends ConsumerWidget {
@@ -67,7 +68,7 @@ class ChartScreen extends ConsumerWidget {
 
   Widget _buildWithChart(
     BuildContext context,
-    List<dynamic> sorted,
+    List<TrainingRecordData> sorted,
     double minW,
     double maxW,
     DateTime firstDate,
@@ -219,7 +220,7 @@ class ChartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildListOnly(BuildContext context, List<dynamic> sorted) {
+  Widget _buildListOnly(BuildContext context, List<TrainingRecordData> sorted) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
