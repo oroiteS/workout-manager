@@ -1,4 +1,3 @@
-// lib/screens/template_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
@@ -44,7 +43,7 @@ class TemplateScreen extends ConsumerWidget {
               final day = index + 1;
               final dayExercises = allTemplates
                   .where((t) => t.dayOfWeek == day)
-                  .map((t) => t.exerciseName)
+                  .map((t) => (exerciseId: t.exerciseId, exerciseName: t.exerciseName))
                   .toList();
 
               return DayTemplateCard(
@@ -97,10 +96,10 @@ class TemplateScreen extends ConsumerWidget {
                     }
                   }
                 },
-                onDelete: (name) async {
+                onDelete: (exerciseId, exerciseName) async {
                   try {
                     final db = ref.read(databaseProvider);
-                    await db.templateDao.deleteExercise(day, name);
+                    await db.templateDao.deleteExercise(day, exerciseId);
                     ref.invalidate(templateProvider);
                     ref.invalidate(templateByDayProvider(day));
                     ref.invalidate(todayExercisesProvider);

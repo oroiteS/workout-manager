@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 class DayTemplateCard extends StatelessWidget {
   final String dayLabel;
   final int dayOfWeek;
-  final List<String> exercises;
+  final List<({int exerciseId, String exerciseName})> exercises;
   final Future<void> Function() onAdd;
-  final Future<void> Function(String) onDelete;
+  final Future<void> Function(int exerciseId, String exerciseName) onDelete;
 
   const DayTemplateCard({
     super.key,
@@ -59,11 +59,11 @@ class DayTemplateCard extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: exercises.map((name) {
+                children: exercises.map((ex) {
                   return Chip(
-                    label: Text(name, style: const TextStyle(fontSize: 13)),
+                    label: Text(ex.exerciseName, style: const TextStyle(fontSize: 13)),
                     deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: () => onDelete(name),
+                    onDeleted: () => onDelete(ex.exerciseId, ex.exerciseName),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
                   );
