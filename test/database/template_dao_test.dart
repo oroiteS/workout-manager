@@ -18,11 +18,23 @@ void main() {
     final exercises = await dao.getByDay(1);
     expect(exercises.length, 1);
     expect(exercises.first.exerciseName, '胸推');
+    expect(exercises.first.exerciseId, isPositive);
+  });
+
+  test('同名动作复用已有 id', () async {
+    await dao.addExercise(1, '卷腹');
+    await dao.addExercise(2, '卷腹');
+
+    final all = await dao.getAll();
+    expect(all.length, 2);
+    expect(all[0].exerciseId, all[1].exerciseId);
+    expect(all[0].exerciseName, all[1].exerciseName);
   });
 
   test('删除动作后查询为空', () async {
     await dao.addExercise(1, '胸推');
-    await dao.deleteExercise(1, '胸推');
+    final added = await dao.getByDay(1);
+    await dao.deleteExercise(1, added.first.exerciseId);
 
     final exercises = await dao.getByDay(1);
     expect(exercises.isEmpty, true);
@@ -32,8 +44,8 @@ void main() {
     await dao.addExercise(1, '动作C');
     await dao.addExercise(1, '动作A');
     final all = await dao.getByDay(1);
-    await dao.updateSortOrder(all.first.exerciseName, 1, 0);
-    await dao.updateSortOrder(all.last.exerciseName, 1, 1);
+    await dao.updateSortOrder(all.first.exerciseId, 1, 0);
+    await dao.updateSortOrder(all.last.exerciseId, 1, 1);
 
     final ordered = await dao.getByDay(1);
     expect(ordered[0].sortOrder, 0);

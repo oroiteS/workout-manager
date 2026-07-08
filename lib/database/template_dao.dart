@@ -23,7 +23,7 @@ class TemplateDao extends DatabaseAccessor<AppDatabase> with _$TemplateDaoMixin 
 
   Future<List<TemplateWithExercise>> getByDay(int dayOfWeek) async {
     final query = select(weekTemplate).join([
-      innerJoin(exercises, exercises.id.equals(weekTemplate.exerciseId)),
+      innerJoin(exercises, exercises.id.equalsExp(weekTemplate.exerciseId)),
     ])
       ..where(weekTemplate.dayOfWeek.equals(dayOfWeek))
       ..orderBy([OrderingTerm(expression: weekTemplate.sortOrder)]);
@@ -43,7 +43,7 @@ class TemplateDao extends DatabaseAccessor<AppDatabase> with _$TemplateDaoMixin 
 
   Future<List<TemplateWithExercise>> getAll() async {
     final query = select(weekTemplate).join([
-      innerJoin(exercises, exercises.id.equals(weekTemplate.exerciseId)),
+      innerJoin(exercises, exercises.id.equalsExp(weekTemplate.exerciseId)),
     ]);
 
     final rows = await query.get();

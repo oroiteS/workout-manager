@@ -1,4 +1,3 @@
-// test/widgets/exercise_input_card_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +10,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: ExerciseInputCard(
+              exerciseId: 1,
               exerciseName: '胸推',
               lastWeight: null,
               lastDate: null,
@@ -30,6 +30,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: ExerciseInputCard(
+              exerciseId: 1,
               exerciseName: '硬拉',
               lastWeight: 80.0,
               lastDate: DateTime(2025, 6, 23),
@@ -51,6 +52,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: ExerciseInputCard(
+              exerciseId: 1,
               exerciseName: '深蹲',
               lastWeight: null,
               lastDate: null,
@@ -72,6 +74,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: ExerciseInputCard(
+              exerciseId: 1,
               exerciseName: '深蹲',
               lastWeight: null,
               lastDate: null,
@@ -96,6 +99,7 @@ void main() {
           },
           home: Scaffold(
             body: ExerciseInputCard(
+              exerciseId: 1,
               exerciseName: '飞鸟',
               lastWeight: null,
               lastDate: null,
