@@ -57,9 +57,9 @@ class ChartScreen extends ConsumerWidget {
           final lastDate = _dateOnly(sorted.last.trainedAt);
 
           if (history.length >= 2) {
-            return _buildWithChart(context, sorted, minW, maxW, firstDate, lastDate);
+            return _buildWithChart(context, ref, exerciseId, sorted, minW, maxW, firstDate, lastDate);
           } else {
-            return _buildListOnly(context, sorted);
+            return _buildListOnly(context, ref, exerciseId, sorted);
           }
         },
       ),
@@ -68,6 +68,8 @@ class ChartScreen extends ConsumerWidget {
 
   Widget _buildWithChart(
     BuildContext context,
+    WidgetRef ref,
+    int exerciseId,
     List<TrainingRecordData> sorted,
     double minW,
     double maxW,
@@ -205,22 +207,25 @@ class ChartScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         Text('历史记录', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
         const SizedBox(height: 8),
-        ...sorted.map((r) => Card(
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          child: ListTile(
-            title: Text('${r.weight} kg'),
-            trailing: Text(
-              DateFormat('yyyy-MM-dd').format(r.trainedAt),
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ...sorted.map((r) => GestureDetector(
+          onLongPress: () => _showDeleteDialog(context, ref, exerciseId, r),
+          child: Card(
+            margin: const EdgeInsets.symmetric(vertical: 2),
+            child: ListTile(
+              title: Text('${r.weight} kg'),
+              trailing: Text(
+                DateFormat('yyyy-MM-dd').format(r.trainedAt),
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              dense: true,
             ),
-            dense: true,
           ),
         )),
       ],
     );
   }
 
-  Widget _buildListOnly(BuildContext context, List<TrainingRecordData> sorted) {
+  Widget _buildListOnly(BuildContext context, WidgetRef ref, int exerciseId, List<TrainingRecordData> sorted) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -228,18 +233,48 @@ class ChartScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         Text('历史记录', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
         const SizedBox(height: 8),
-        ...sorted.map((r) => Card(
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          child: ListTile(
-            title: Text('${r.weight} kg'),
-            trailing: Text(
-              DateFormat('yyyy-MM-dd').format(r.trainedAt),
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ...sorted.map((r) => GestureDetector(
+          onLongPress: () => _showDeleteDialog(context, ref, exerciseId, r),
+          child: Card(
+            margin: const EdgeInsets.symmetric(vertical: 2),
+            child: ListTile(
+              title: Text('${r.weight} kg'),
+              trailing: Text(
+                DateFormat('yyyy-MM-dd').format(r.trainedAt),
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              dense: true,
             ),
-            dense: true,
           ),
         )),
       ],
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, WidgetRef ref, int exerciseId, TrainingRecordData record) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除记录'),
+        content: Text('确定要删除 ${record.exerciseName} ${record.weight}kg 的记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await ref.read(databaseProvider).recordDao.deleteById(record.id);
+              ref.invalidate(exerciseHistoryProvider(exerciseId));
+              ref.invalidate(recordsGroupedByDateProvider);
+              ref.invalidate(recordDatesProvider);
+              ref.invalidate(recordsForDateProvider);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 

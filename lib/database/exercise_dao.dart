@@ -23,7 +23,11 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase> with _$ExerciseDaoMixin 
     return into(exercises).insert(ExercisesCompanion.insert(name: name));
   }
 
-  Future<int> deleteById(int id) {
+  Future<int> deleteById(int id) async {
+    await (delete(attachedDatabase.weekTemplate)
+      ..where((t) => t.exerciseId.equals(id))).go();
+    await (delete(attachedDatabase.trainingRecord)
+      ..where((t) => t.exerciseId.equals(id))).go();
     return (delete(exercises)..where((e) => e.id.equals(id))).go();
   }
 
