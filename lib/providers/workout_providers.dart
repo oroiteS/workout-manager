@@ -2,49 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/database/database.dart';
 
-// ─── 主题 ───
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
-// ─── 数据库单例 ───
 final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase());
 
-// ─── 今日训练 ───
-
-final todayExercisesProvider = FutureProvider<List<WeekTemplateData>>((ref) async {
+final allExercisesProvider = FutureProvider<List<Exercise>>((ref) async {
   final db = ref.watch(databaseProvider);
-  final weekday = DateTime.now().weekday; // 1=Mon..7=Sun
+  return db.exerciseDao.getAll();
+});
+
+final todayExercisesProvider = FutureProvider<List<TemplateWithExercise>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final weekday = DateTime.now().weekday;
   return db.templateDao.getByDay(weekday);
 });
 
-final lastWeightsProvider = FutureProvider.family<double?, String>((ref, exerciseName) async {
+final lastWeightsProvider = FutureProvider.family<double?, int>((ref, exerciseId) async {
   final db = ref.watch(databaseProvider);
-  return db.recordDao.getLastWeight(exerciseName);
+  return db.recordDao.getLastWeight(exerciseId);
 });
 
-final lastTrainedDateProvider = FutureProvider.family<DateTime?, String>((ref, exerciseName) async {
+final lastTrainedDateProvider = FutureProvider.family<DateTime?, int>((ref, exerciseId) async {
   final db = ref.watch(databaseProvider);
-  return db.recordDao.getLastTrainedAt(exerciseName);
+  return db.recordDao.getLastTrainedAt(exerciseId);
 });
 
-// ─── 周模板 ───
-
-final templateProvider = FutureProvider<List<WeekTemplateData>>((ref) async {
+final templateProvider = FutureProvider<List<TemplateWithExercise>>((ref) async {
   final db = ref.watch(databaseProvider);
   return db.templateDao.getAll();
 });
 
-final templateByDayProvider = FutureProvider.family<List<WeekTemplateData>, int>((ref, day) async {
+final templateByDayProvider = FutureProvider.family<List<TemplateWithExercise>, int>((ref, day) async {
   final db = ref.watch(databaseProvider);
   return db.templateDao.getByDay(day);
 });
 
-// ─── 训练记录 ───
-
-final saveRecordsProvider = FutureProvider.family<void, Map<String, double>>((ref, records) async {
+final saveRecordsProvider = FutureProvider.family<void, Map<int, ({String name, double weight})>>((ref, records) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
   for (final entry in records.entries) {
-    await db.recordDao.upsertRecord(entry.key, entry.value, now);
+    await db.recordDao.upsertRecord(entry.key, entry.value.name, entry.value.weight, now);
   }
   ref.invalidate(lastWeightsProvider);
   ref.invalidate(lastTrainedDateProvider);
@@ -68,15 +65,11 @@ final recordsGroupedByDateProvider = FutureProvider<List<TrainingRecordData>>((r
   return db.recordDao.getRecordsGroupedByDate(limit: 50);
 });
 
-// ─── 图表数据 ───
-
 final exerciseHistoryProvider =
-    FutureProvider.family<List<TrainingRecordData>, String>((ref, exerciseName) async {
+    FutureProvider.family<List<TrainingRecordData>, int>((ref, exerciseId) async {
   final db = ref.watch(databaseProvider);
-  return db.recordDao.getHistory(exerciseName, limit: 20);
+  return db.recordDao.getHistory(exerciseId, limit: 20);
 });
-
-// ─── 日历 ───
 
 final recordDatesProvider = FutureProvider<List<DateTime>>((ref) async {
   final db = ref.watch(databaseProvider);
@@ -88,14 +81,12 @@ final recordsForDateProvider = FutureProvider.family<List<TrainingRecordData>, D
   return db.recordDao.getRecordsForDate(date);
 });
 
-// ─── 补录历史记录 ───
-
 final saveRecordsForDateProvider =
-    FutureProvider.family<void, ({DateTime date, Map<String, double> records})>(
+    FutureProvider.family<void, ({DateTime date, Map<int, ({String name, double weight})> records})>(
   (ref, params) async {
     final db = ref.watch(databaseProvider);
     for (final entry in params.records.entries) {
-      await db.recordDao.upsertRecord(entry.key, entry.value, params.date);
+      await db.recordDao.upsertRecord(entry.key, entry.value.name, entry.value.weight, params.date);
     }
     ref.invalidate(lastWeightsProvider);
     ref.invalidate(lastTrainedDateProvider);
@@ -105,5 +96,3 @@ final saveRecordsForDateProvider =
     ref.invalidate(recordsForDateProvider);
   },
 );
-
-// ─── 模板操作（直接在 UI 层调用 DAO，不走 provider 缓存）───
