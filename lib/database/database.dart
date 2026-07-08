@@ -5,47 +5,52 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'dart:io';
 
+import 'exercise_dao.dart';
 import 'template_dao.dart';
 import 'record_dao.dart';
 
+export 'exercise_dao.dart';
 export 'template_dao.dart';
 export 'record_dao.dart';
 
 part 'database.g.dart';
 
-/// 周训练模板 — 每天有几个动作
+class Exercises extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().unique()();
+}
+
 class WeekTemplate extends Table {
   IntColumn get dayOfWeek => integer()();
-  TextColumn get exerciseName => text()();
+  IntColumn get exerciseId => integer()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
-  Set<Column> get primaryKey => {dayOfWeek, exerciseName};
+  Set<Column> get primaryKey => {dayOfWeek, exerciseId};
 }
 
-/// 训练记录 — 每次训练的动作+重量
 class TrainingRecord extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get exerciseId => integer()();
   TextColumn get exerciseName => text()();
   RealColumn get weight => real()();
   DateTimeColumn get trainedAt => dateTime()();
 }
 
-@DriftDatabase(tables: [WeekTemplate, TrainingRecord])
+@DriftDatabase(tables: [Exercises, WeekTemplate, TrainingRecord])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openDatabase());
 
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
-  /// 暴露 DAOs
+  ExerciseDao get exerciseDao => ExerciseDao(this);
   TemplateDao get templateDao => TemplateDao(this);
   RecordDao get recordDao => RecordDao(this);
 }
 
-/// 用于测试的内存数据库
 AppDatabase createMemoryDb() {
   return AppDatabase.forTesting();
 }
