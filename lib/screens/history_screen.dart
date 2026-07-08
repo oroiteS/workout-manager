@@ -158,16 +158,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 
   Future<void> _retroAddRecords() async {
-    final ctx = context;
     final templateExercises = await ref.read(templateByDayProvider(_selectedDay.weekday).future);
     if (templateExercises.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${DateFormat('M月d日 EEEE', 'zh_CN').format(_selectedDay)} 的模板没有动作，请先去「周模板」添加')),
         );
       }
       return;
     }
+
+    if (!mounted) return;
 
     final controllers = <int, TextEditingController>{};
     for (final t in templateExercises) {
@@ -175,7 +176,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     }
 
     final result = await showDialog<Map<int, ({String name, double weight})>>(
-      context: ctx,
+      context: context,
       builder: (dialogCtx) => AlertDialog(
         title: Text('补录：${DateFormat('M月d日 EEEE', 'zh_CN').format(_selectedDay)}'),
         content: SizedBox(
@@ -210,7 +211,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   records[t.exerciseId] = (name: t.exerciseName, weight: v);
                 }
               }
-              Navigator.pop(ctx, records);
+              Navigator.pop(dialogCtx, records);
             },
             child: const Text('保存'),
           ),
