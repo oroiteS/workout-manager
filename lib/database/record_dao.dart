@@ -8,19 +8,19 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
   RecordDao(super.attachedDatabase);
 
   Future<List<TrainingRecordData>> getHistory(
-    String exerciseName, {
+    int exerciseId, {
     int limit = 20,
   }) {
     return (select(trainingRecord)
-          ..where((t) => t.exerciseName.equals(exerciseName))
-          ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
-          ..limit(limit))
-        .get();
+      ..where((t) => t.exerciseId.equals(exerciseId))
+      ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
+      ..limit(limit))
+      .get();
   }
 
-  Future<double?> getLastWeight(String exerciseName) async {
+  Future<double?> getLastWeight(int exerciseId) async {
     final query = select(trainingRecord)
-      ..where((t) => t.exerciseName.equals(exerciseName))
+      ..where((t) => t.exerciseId.equals(exerciseId))
       ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
       ..limit(1);
 
@@ -28,9 +28,9 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
     return result?.weight;
   }
 
-  Future<DateTime?> getLastTrainedAt(String exerciseName) async {
+  Future<DateTime?> getLastTrainedAt(int exerciseId) async {
     final query = select(trainingRecord)
-      ..where((t) => t.exerciseName.equals(exerciseName))
+      ..where((t) => t.exerciseId.equals(exerciseId))
       ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
       ..limit(1);
 
@@ -39,6 +39,7 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
   }
 
   Future<void> upsertRecord(
+    int exerciseId,
     String exerciseName,
     double weight,
     DateTime trainedAt,
@@ -48,17 +49,18 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
 
     final existing = await (select(trainingRecord)
       ..where((t) =>
-          t.exerciseName.equals(exerciseName) &
-          t.trainedAt.isBiggerOrEqualValue(startOfDay) &
-          t.trainedAt.isSmallerThanValue(endOfDay)))
-        .getSingleOrNull();
+        t.exerciseId.equals(exerciseId) &
+        t.trainedAt.isBiggerOrEqualValue(startOfDay) &
+        t.trainedAt.isSmallerThanValue(endOfDay)))
+      .getSingleOrNull();
 
     if (existing != null) {
       await (update(trainingRecord) ..where((t) => t.id.equals(existing.id)))
-          .write(TrainingRecordCompanion(weight: Value(weight)));
+        .write(TrainingRecordCompanion(weight: Value(weight)));
     } else {
       await into(trainingRecord).insert(
         TrainingRecordCompanion.insert(
+          exerciseId: exerciseId,
           exerciseName: exerciseName,
           weight: weight,
           trainedAt: trainedAt,
@@ -69,7 +71,7 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
 
   Future<void> updateWeight(int id, double weight) async {
     await (update(trainingRecord) ..where((t) => t.id.equals(id)))
-        .write(TrainingRecordCompanion(weight: Value(weight)));
+      .write(TrainingRecordCompanion(weight: Value(weight)));
   }
 
   Future<void> deleteById(int id) async {
@@ -80,7 +82,7 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
     return (select(trainingRecord)
       ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)])
       ..limit(limit))
-        .get();
+      .get();
   }
 
   Future<List<TrainingRecordData>> getRecordsForDate(DateTime date) async {
@@ -88,13 +90,12 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
     final endOfDay = startOfDay.add(const Duration(days: 1));
     return (select(trainingRecord)
       ..where((t) =>
-          t.trainedAt.isBiggerOrEqualValue(startOfDay) &
-          t.trainedAt.isSmallerThanValue(endOfDay))
+        t.trainedAt.isBiggerOrEqualValue(startOfDay) &
+        t.trainedAt.isSmallerThanValue(endOfDay))
       ..orderBy([(t) => OrderingTerm(expression: t.exerciseName)]))
       .get();
   }
 
-  /// 获取有训练记录的所有日期（去重），用于日历标记
   Future<List<DateTime>> getRecordDates() async {
     final all = await (select(trainingRecord)
       ..orderBy([(t) => OrderingTerm(expression: t.trainedAt, mode: OrderingMode.desc)]))
