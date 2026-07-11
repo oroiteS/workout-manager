@@ -8,16 +8,19 @@ import 'dart:io';
 import 'exercise_dao.dart';
 import 'template_dao.dart';
 import 'record_dao.dart';
+import 'catalog_dao.dart';
 
 export 'exercise_dao.dart';
 export 'template_dao.dart';
 export 'record_dao.dart';
+export 'catalog_dao.dart';
 
 part 'database.g.dart';
 
 class Exercises extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().unique()();
+  TextColumn get datasetId => text().nullable()();
 }
 
 class WeekTemplate extends Table {
@@ -37,18 +40,46 @@ class TrainingRecord extends Table {
   DateTimeColumn get trainedAt => dateTime()();
 }
 
-@DriftDatabase(tables: [Exercises, WeekTemplate, TrainingRecord])
+class CatalogExercises extends Table {
+  TextColumn get datasetId => text()();
+  TextColumn get nameEn => text()();
+  TextColumn get nameZh => text()();
+  TextColumn get bodyPart => text()();
+  TextColumn get equipment => text()();
+  TextColumn get target => text()();
+  TextColumn get muscleGroup => text()();
+  TextColumn get secondaryMuscles => text()();
+  TextColumn get instructionsZh => text()();
+  TextColumn get instructionStepsZh => text()();
+  TextColumn get gifAsset => text()();
+
+  @override
+  Set<Column> get primaryKey => {datasetId};
+}
+
+class AppMeta extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+@DriftDatabase(
+  tables: [Exercises, WeekTemplate, TrainingRecord, CatalogExercises, AppMeta],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openDatabase());
 
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   ExerciseDao get exerciseDao => ExerciseDao(this);
   TemplateDao get templateDao => TemplateDao(this);
   RecordDao get recordDao => RecordDao(this);
+  CatalogDao get catalogDao => CatalogDao(this);
 }
 
 AppDatabase createMemoryDb() {

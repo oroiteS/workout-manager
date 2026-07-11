@@ -1,7 +1,7 @@
 name: workout_manager
 description: 极简健身重量记录工具
 publish_to: 'none'
-version: 1.0.9+10
+version: 1.1.0+11
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -35,3 +35,6 @@ hooks:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/exercises/catalog.json
+    - assets/exercises/gifs/

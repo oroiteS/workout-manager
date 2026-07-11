@@ -59,13 +59,15 @@ class TemplateDao extends DatabaseAccessor<AppDatabase> with _$TemplateDaoMixin 
     }).toList();
   }
 
-  Future<void> addExercise(int dayOfWeek, String exerciseName) async {
-    final existing = await (select(exercises)
-      ..where((e) => e.name.equals(exerciseName)))
-      .getSingleOrNull();
-
-    final exerciseId = existing?.id ??
-      await into(exercises).insert(ExercisesCompanion.insert(name: exerciseName));
+  Future<void> addExercise(
+    int dayOfWeek,
+    String exerciseName, {
+    String? datasetId,
+  }) async {
+    final exerciseId = await attachedDatabase.exerciseDao.ensureExercise(
+      name: exerciseName,
+      datasetId: datasetId,
+    );
 
     await into(weekTemplate).insert(
       WeekTemplateCompanion.insert(
