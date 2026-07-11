@@ -49,3 +49,4 @@ app.*.map.json
 
 # --- Docs (generated) ---
 docs/
+exercises-dataset/
