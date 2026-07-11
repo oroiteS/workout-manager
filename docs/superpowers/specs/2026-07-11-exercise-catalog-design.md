@@ -1,7 +1,7 @@
 # 动作库与示意图 — 设计说明
 
 **日期：** 2026-07-11  
-**状态：** 待用户确认后进入实现计划  
+**状态：** 已确认；实现计划见 docs/superpowers/plans/2026-07-11-exercise-catalog-plan.md  
 **关联：** 现有 Workout Manager（v1.0.9）+ 本地 `exercises-dataset` 素材
 
 ---
