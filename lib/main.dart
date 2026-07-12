@@ -7,6 +7,7 @@ import 'package:workout_manager/screens/today_training_screen.dart';
 import 'package:workout_manager/screens/template_screen.dart';
 import 'package:workout_manager/screens/chart_screen.dart';
 import 'package:workout_manager/screens/history_screen.dart';
+import 'package:workout_manager/screens/catalog_screen.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
 
 Future<void> main() async {
@@ -73,6 +74,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     TodayTrainingScreen(),
     TemplateScreen(),
     HistoryScreen(),
+    CatalogScreen(),
   ];
 
   @override
@@ -100,6 +102,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               icon: Icon(Icons.history_outlined),
               selectedIcon: Icon(Icons.history),
               label: '记录',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.menu_book_outlined),
+              selectedIcon: Icon(Icons.menu_book),
+              label: '示意图',
             ),
           ],
         ),
