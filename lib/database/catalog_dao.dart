@@ -70,9 +70,13 @@ class CatalogDao extends DatabaseAccessor<AppDatabase> with _$CatalogDaoMixin {
         .getSingleOrNull();
   }
 
-  Future<CatalogExercise?> findByNameZh(String name) {
-    return (select(catalogExercises)..where((t) => t.nameZh.equals(name)))
-        .getSingleOrNull();
+  Future<CatalogExercise?> findByNameZh(String name) async {
+    final rows = await (select(catalogExercises)
+          ..where((t) => t.nameZh.equals(name))
+          ..orderBy([(t) => OrderingTerm.asc(t.datasetId)]))
+        .get();
+    if (rows.isEmpty) return null;
+    return rows.first;
   }
 
   Future<List<CatalogExercise>> query({

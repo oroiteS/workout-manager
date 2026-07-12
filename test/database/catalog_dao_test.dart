@@ -80,4 +80,42 @@ void main() {
     expect(hit?.datasetId, '0002');
     expect(await db.catalogDao.findByNameZh('不存在'), isNull);
   });
+
+  test('findByNameZh 重复 name_zh 返回首条且不抛', () async {
+    await db.catalogDao.importCatalog({
+      'catalog_version': 1,
+      'exercises': [
+        {
+          'dataset_id': 'a002',
+          'name_en': 'B',
+          'name_zh': '哑铃直腿硬拉',
+          'body_part': 'upper legs',
+          'equipment': 'dumbbell',
+          'target': 'glutes',
+          'muscle_group': 'glutes',
+          'secondary_muscles': <String>[],
+          'instructions_zh': '',
+          'instruction_steps_zh': <String>[],
+          'gif_asset': 'assets/exercises/gifs/a002.gif',
+        },
+        {
+          'dataset_id': 'a001',
+          'name_en': 'A',
+          'name_zh': '哑铃直腿硬拉',
+          'body_part': 'upper legs',
+          'equipment': 'dumbbell',
+          'target': 'hamstrings',
+          'muscle_group': 'hamstrings',
+          'secondary_muscles': <String>[],
+          'instructions_zh': '',
+          'instruction_steps_zh': <String>[],
+          'gif_asset': 'assets/exercises/gifs/a001.gif',
+        },
+      ],
+    });
+    final hit = await db.catalogDao.findByNameZh('哑铃直腿硬拉');
+    expect(hit, isNotNull);
+    expect(hit!.nameZh, '哑铃直腿硬拉');
+    expect(hit.datasetId, 'a001');
+  });
 }

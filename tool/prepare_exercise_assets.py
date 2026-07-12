@@ -79,6 +79,18 @@ def main() -> int:
             }
         )
 
+    # Warn on duplicate name_zh (runtime findByNameZh returns first by datasetId).
+    name_zh_to_ids: dict[str, list[str]] = {}
+    for item in out_items:
+        name_zh_to_ids.setdefault(item["name_zh"], []).append(item["dataset_id"])
+    dup_name_zh = {k: v for k, v in name_zh_to_ids.items() if len(v) > 1}
+    if dup_name_zh:
+        print(f"WARN: {len(dup_name_zh)} duplicate name_zh values:", file=sys.stderr)
+        for name, ids in sorted(dup_name_zh.items())[:20]:
+            print(f"  {name!r} -> {ids}", file=sys.stderr)
+        if len(dup_name_zh) > 20:
+            print(f"  ... and {len(dup_name_zh) - 20} more", file=sys.stderr)
+
     catalog = {"catalog_version": CATALOG_VERSION, "exercises": out_items}
     OUT_JSON.write_text(json.dumps(catalog, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
 
@@ -87,6 +99,7 @@ def main() -> int:
     print(f"exercises={len(out_items)}")
     print(f"gifs_written_or_present={gif_count}")
     print(f"missing_gif={len(missing_gif)} {missing_gif[:5] if missing_gif else ''}")
+    print(f"duplicate_name_zh={len(dup_name_zh)}")
     print(f"wrote {OUT_JSON} ({OUT_JSON.stat().st_size / 1e6:.1f} MB)")
     if missing_gif:
         return 2

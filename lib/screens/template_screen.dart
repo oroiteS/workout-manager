@@ -30,7 +30,7 @@ class TemplateScreen extends ConsumerWidget {
           ),
           const Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.1.1', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.1.2', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
@@ -106,17 +106,22 @@ class TemplateScreen extends ConsumerWidget {
     if (!context.mounted || choice == null) return;
 
     if (choice == 'catalog') {
+      final previousQuery = ref.read(catalogQueryProvider);
+      ref.read(catalogQueryProvider.notifier).state = CatalogQuery.empty();
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => CatalogBrowser(
-            mode: CatalogBrowserMode.pick,
-            dayOfWeek: day,
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: const Text('从动作库选择'),
+            ),
+            body: CatalogBrowser(
+              mode: CatalogBrowserMode.pick,
+              dayOfWeek: day,
+            ),
           ),
         ),
       );
-      ref.invalidate(templateProvider);
-      ref.invalidate(templateByDayProvider(day));
-      ref.invalidate(todayExercisesProvider);
+      ref.read(catalogQueryProvider.notifier).state = previousQuery;
       return;
     }
 
@@ -131,72 +136,81 @@ class TemplateScreen extends ConsumerWidget {
     int day,
     String dayLabel,
   ) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('为$dayLabel添加动作'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: '动作名称',
-            border: OutlineInputBorder(),
+    String prefill = '';
+    while (true) {
+      if (!context.mounted) return;
+      final controller = TextEditingController(text: prefill);
+      final name = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('为$dayLabel添加动作'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: '动作名称',
+              border: OutlineInputBorder(),
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final text = controller.text.trim();
+                if (text.isNotEmpty) Navigator.pop(ctx, text);
+              },
+              child: const Text('添加'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isNotEmpty) Navigator.pop(ctx, text);
-            },
-            child: const Text('添加'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (name == null || name.isEmpty || !context.mounted) return;
+      );
+      controller.dispose();
+      if (name == null || name.isEmpty || !context.mounted) return;
 
-    try {
-      final db = ref.read(databaseProvider);
-      final hit = await db.catalogDao.findByNameZh(name);
-      if (hit != null) {
-        if (!context.mounted) return;
-        final ok = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('合并动作'),
-            content: Text('库中已有「$name」，合并并显示示意图？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('合并'),
-              ),
-            ],
-          ),
-        );
-        if (ok != true) return;
-        await db.templateDao.addExercise(day, hit.nameZh, datasetId: hit.datasetId);
-      } else {
-        await db.templateDao.addExercise(day, name, datasetId: null);
-      }
-      ref.invalidate(templateProvider);
-      ref.invalidate(templateByDayProvider(day));
-      ref.invalidate(todayExercisesProvider);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('添加失败: $e'), backgroundColor: Colors.red),
-        );
+      try {
+        final db = ref.read(databaseProvider);
+        final hit = await db.catalogDao.findByNameZh(name);
+        if (hit != null) {
+          if (!context.mounted) return;
+          final ok = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('合并动作'),
+              content: Text('库中已有「$name」，合并并显示示意图？'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('取消'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('合并'),
+                ),
+              ],
+            ),
+          );
+          if (ok != true) {
+            prefill = name;
+            continue;
+          }
+          await db.templateDao.addExercise(day, hit.nameZh, datasetId: hit.datasetId);
+        } else {
+          await db.templateDao.addExercise(day, name, datasetId: null);
+        }
+        ref.invalidate(templateProvider);
+        ref.invalidate(templateByDayProvider(day));
+        ref.invalidate(todayExercisesProvider);
+        return;
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('添加失败: $e'), backgroundColor: Colors.red),
+          );
+        }
+        return;
       }
     }
   }
