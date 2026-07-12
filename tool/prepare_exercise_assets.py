@@ -15,7 +15,7 @@ NAMES_ZH = ROOT / "tool" / "names_zh.json"
 OUT_DIR = ROOT / "assets" / "exercises"
 OUT_JSON = OUT_DIR / "catalog.json"
 OUT_GIFS = OUT_DIR / "gifs"
-CATALOG_VERSION = 1
+CATALOG_VERSION = 2
 
 
 def main() -> int:
