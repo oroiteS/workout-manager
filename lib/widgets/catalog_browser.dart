@@ -5,10 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/catalog/filter_labels.dart';
 import 'package:workout_manager/database/database.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
+import 'package:workout_manager/widgets/catalog_browser_mode.dart';
 import 'package:workout_manager/widgets/catalog_detail_page.dart';
 import 'package:workout_manager/widgets/catalog_filter_sheets.dart';
-
-enum CatalogBrowserMode { browse, pick }
 
 class CatalogBrowser extends ConsumerStatefulWidget {
   final CatalogBrowserMode mode;
@@ -69,6 +68,7 @@ class _CatalogBrowserState extends ConsumerState<CatalogBrowser> {
 
   Future<void> _addExercise(CatalogExercise ex) async {
     final day = widget.dayOfWeek;
+    assert(day != null, 'CatalogBrowserMode.pick requires dayOfWeek');
     if (day == null) return;
     try {
       final db = ref.read(databaseProvider);

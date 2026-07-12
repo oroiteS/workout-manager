@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/catalog/filter_labels.dart';
 import 'package:workout_manager/database/database.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
-import 'package:workout_manager/widgets/catalog_browser.dart';
+import 'package:workout_manager/widgets/catalog_browser_mode.dart';
 
 class CatalogDetailPage extends ConsumerWidget {
   final CatalogExercise exercise;
@@ -43,6 +43,7 @@ class CatalogDetailPage extends ConsumerWidget {
 
   Future<void> _addToTemplate(BuildContext context, WidgetRef ref) async {
     final day = dayOfWeek;
+    assert(day != null, 'CatalogBrowserMode.pick requires dayOfWeek');
     if (day == null) return;
     try {
       final db = ref.read(databaseProvider);
