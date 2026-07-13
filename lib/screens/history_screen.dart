@@ -40,7 +40,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
           const Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.1.3', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.1.4', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
