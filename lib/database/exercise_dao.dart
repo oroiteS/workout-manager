@@ -62,4 +62,12 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase> with _$ExerciseDaoMixin 
         .write(ExercisesCompanion(name: Value(newName)));
     return rows > 0;
   }
+
+  Future<int> insertWithId(ExercisesCompanion companion) {
+    return into(exercises).insert(companion);
+  }
+
+  Future<void> deleteAll() async {
+    await delete(exercises).go();
+  }
 }

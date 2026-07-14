@@ -93,4 +93,12 @@ class TemplateDao extends DatabaseAccessor<AppDatabase> with _$TemplateDaoMixin 
         t.dayOfWeek.equals(dayOfWeek)))
       .write(WeekTemplateCompanion(sortOrder: Value(newOrder)));
   }
+
+  Future<int> insertWithId(WeekTemplateCompanion companion) {
+    return into(weekTemplate).insert(companion);
+  }
+
+  Future<void> deleteAll() async {
+    await delete(weekTemplate).go();
+  }
 }

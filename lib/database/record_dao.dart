@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:workout_manager/backup/backup_models.dart';
 import 'database.dart';
 
 part 'record_dao.g.dart';
@@ -112,5 +113,36 @@ class RecordDao extends DatabaseAccessor<AppDatabase> with _$RecordDaoMixin {
       }
     }
     return result;
+  }
+
+  Future<List<TrainingRecordRowData>> getAllForBackup() async {
+    return select(trainingRecord).map((row) {
+      return TrainingRecordRowData(
+        exerciseId: row.exerciseId,
+        exerciseName: row.exerciseName,
+        weight: row.weight,
+        trainedAt: row.trainedAt.toIso8601String(),
+      );
+    }).get();
+  }
+
+  Future<void> deleteAll() async {
+    await delete(trainingRecord).go();
+  }
+
+  Future<int> insertFromBackup({
+    required int exerciseId,
+    required String exerciseName,
+    required double weight,
+    required DateTime trainedAt,
+  }) {
+    return into(trainingRecord).insert(
+      TrainingRecordCompanion.insert(
+        exerciseId: exerciseId,
+        exerciseName: exerciseName,
+        weight: weight,
+        trainedAt: trainedAt,
+      ),
+    );
   }
 }
