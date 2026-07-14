@@ -222,6 +222,9 @@ BackupFile validateBackup(Map<String, dynamic> json) {
         trainedAt is! String) {
       throw BackupParseException('trainingRecords 字段类型错误');
     }
+    if (DateTime.tryParse(trainedAt) == null) {
+      throw BackupParseException('trainingRecords trainedAt 无法解析: $trainedAt');
+    }
     if (!exerciseIds.contains(exerciseId)) {
       throw BackupParseException(
         'trainingRecords 引用了不存在的 exerciseId: $exerciseId',

@@ -34,13 +34,24 @@ class BackupService {
         )
         .toList();
 
+    final recordRows = allRecords
+        .map(
+          (r) => TrainingRecordRowData(
+            exerciseId: r.exerciseId,
+            exerciseName: r.exerciseName,
+            weight: r.weight,
+            trainedAt: r.trainedAt.toIso8601String(),
+          ),
+        )
+        .toList();
+
     final backup = BackupFile(
       exportedAt: now.toUtc().toIso8601String(),
       appVersion: '1.2.0+16',
       data: BackupData(
         exercises: exercisesRows,
         weekTemplate: templateRows,
-        trainingRecords: allRecords,
+        trainingRecords: recordRows,
       ),
     );
 

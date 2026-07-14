@@ -19,7 +19,7 @@
 - 同名动作全局唯一：自定义名称若与库内中文名完全一致，可合并绑定库动作并显示示意图
 - 数据本地 SQLite 存储，无账号、无云同步
 - 界面中文；支持浅色 / 深色主题
-- **备份（JSON v1）**：在「今日训练」页导出 / 导入；文件含 `version: 1`、`exportedAt`、`appVersion` 与 `data`（`exercises` / `weekTemplate` / `trainingRecords`）。导入会**整库覆盖**当前训练数据，不可撤销
+- **备份（JSON v1）**：在「今日训练」页导出 / 导入；文件含 `version: 1`、`exportedAt`、`appVersion` 与 `data`（`exercises` / `weekTemplate` / `trainingRecords`）。导入会**整库覆盖**当前训练数据，不可撤销。导出优先自选路径；失败时可分享备份文件
 
 ## 动作库数据来源
 

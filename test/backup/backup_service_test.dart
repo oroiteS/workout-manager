@@ -70,7 +70,47 @@ void main() {
     expect(records.first.exerciseId, exId1);
     expect(records.first.exerciseName, '杠铃卧推');
     expect(records.first.weight, 60.5);
-    expect(DateTime.parse(records.first.trainedAt), trainedAt);
+    expect(records.first.trainedAt, trainedAt);
+  });
+
+  test('trainedAt 非法字符串导入 → 抛异常，原数据不变', () async {
+    final id = await db.exerciseDao.add('保留动作');
+    await db.recordDao.upsertRecord(
+      id,
+      '保留动作',
+      40,
+      DateTime(2026, 6, 1),
+    );
+
+    final badJson = jsonEncode({
+      'format': BackupFile.format,
+      'version': BackupFile.version,
+      'exportedAt': '2026-07-14T10:00:00.000Z',
+      'appVersion': '1.2.0+16',
+      'data': {
+        'exercises': [
+          {'id': 1, 'name': '杠铃卧推', 'datasetId': null},
+        ],
+        'weekTemplate': <Map<String, dynamic>>[],
+        'trainingRecords': [
+          {
+            'exerciseId': 1,
+            'exerciseName': '杠铃卧推',
+            'weight': 60.5,
+            'trainedAt': 'not-a-date',
+          },
+        ],
+      },
+    });
+
+    await expectLater(
+      service.importFromJsonString(badJson),
+      throwsA(isA<BackupParseException>()),
+    );
+
+    expect((await db.exerciseDao.getAll()).length, 1);
+    expect((await db.exerciseDao.getAll()).first.name, '保留动作');
+    expect((await db.recordDao.getAllForBackup()).length, 1);
   });
 
   test('非法 JSON 导入 → 抛异常，原数据不变', () async {
@@ -222,6 +262,7 @@ void main() {
     expect(records.first.exerciseId, 10);
     expect(records.first.exerciseName, '新动作A');
     expect(records.first.weight, 80.0);
+    expect(records.first.trainedAt, DateTime(2026, 7, 10, 8, 0));
 
     final catalogAfter = await db.catalogDao.getAll();
     expect(catalogAfter.length, catalogCountBefore);

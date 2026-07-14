@@ -141,6 +141,29 @@ void main() {
       );
     });
 
+    test('trainedAt 非法字符串抛出 BackupParseException', () {
+      final json = validBackupJson(
+        trainingRecords: [
+          {
+            'exerciseId': 1,
+            'exerciseName': '杠铃卧推',
+            'weight': 60.5,
+            'trainedAt': 'not-a-date',
+          },
+        ],
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('trainedAt'),
+          ),
+        ),
+      );
+    });
+
     test('合法 JSON 返回 BackupFile', () {
       final json = validBackupJson();
       final file = validateBackup(json);

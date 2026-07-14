@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:workout_manager/backup/backup_models.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
 import 'package:workout_manager/widgets/exercise_input_card.dart';
@@ -28,23 +30,42 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
       final dateStr = DateFormat('yyyy-MM-dd').format(now);
       final suggestedName = 'workout-backup-$dateStr.json';
 
-      final result = await FilePicker.platform.saveFile(
-        dialogTitle: '导出备份',
-        fileName: suggestedName,
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
+      try {
+        final result = await FilePicker.platform.saveFile(
+          dialogTitle: '导出备份',
+          fileName: suggestedName,
+          type: FileType.custom,
+          allowedExtensions: ['json'],
+        );
 
-      if (result == null) {
+        if (result == null) {
+          return;
+        }
+
+        await File(result).writeAsString(jsonString);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('已导出: $result')),
+          );
+        }
         return;
+      } catch (_) {
+        // saveFile 不可用或写盘失败时，回退到系统分享
       }
 
-      final file = File(result);
-      await file.writeAsString(jsonString);
+      final dir = await getTemporaryDirectory();
+      final tempPath = '${dir.path}/$suggestedName';
+      final tempFile = File(tempPath);
+      await tempFile.writeAsString(jsonString);
+      await Share.shareXFiles(
+        [XFile(tempPath, mimeType: 'application/json')],
+        subject: suggestedName,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已导出: $result')),
+          const SnackBar(content: Text('已通过分享导出备份')),
         );
       }
     } catch (e) {
