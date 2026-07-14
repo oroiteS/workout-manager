@@ -50,7 +50,11 @@ class BackupService {
   Future<void> importFromJsonString(String jsonString) async {
     final Map<String, dynamic> json;
     try {
-      json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map<String, dynamic>) {
+        throw BackupParseException('JSON 根节点必须为对象');
+      }
+      json = decoded;
     } on FormatException catch (e) {
       throw BackupParseException('JSON 解析失败: ${e.message}');
     }
