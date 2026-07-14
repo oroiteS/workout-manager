@@ -3,11 +3,16 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workout_manager/backup/backup_service.dart';
 import 'package:workout_manager/database/database.dart';
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
 final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase());
+
+final backupServiceProvider = Provider<BackupService>((ref) {
+  return BackupService(ref.watch(databaseProvider));
+});
 
 final catalogBootstrapProvider = FutureProvider<void>((ref) async {
   final db = ref.watch(databaseProvider);

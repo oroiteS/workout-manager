@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:workout_manager/backup/backup_models.dart';
-import 'package:workout_manager/backup/backup_service.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
 import 'package:workout_manager/widgets/exercise_input_card.dart';
 
@@ -23,7 +22,7 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
 
   Future<void> _exportBackup() async {
     try {
-      final service = BackupService(ref.read(databaseProvider));
+      final service = ref.read(backupServiceProvider);
       final jsonString = await service.exportToJson();
       final now = DateTime.now();
       final dateStr = DateFormat('yyyy-MM-dd').format(now);
@@ -97,9 +96,26 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
       return;
     }
     try {
-      final service = BackupService(ref.read(databaseProvider));
+      final service = ref.read(backupServiceProvider);
       await service.importFromJsonString(content);
+      ref.invalidate(todayExercisesProvider);
+      ref.invalidate(templateProvider);
+      ref.invalidate(templateByDayProvider);
+      ref.invalidate(allExercisesProvider);
+      ref.invalidate(exerciseHistoryProvider);
+      ref.invalidate(recordsGroupedByDateProvider);
+      ref.invalidate(recordDatesProvider);
+      ref.invalidate(recordsForDateProvider);
+      ref.invalidate(saveRecordsProvider);
+      ref.invalidate(saveRecordsForDateProvider);
+      ref.invalidate(lastWeightsProvider);
+      ref.invalidate(lastTrainedDateProvider);
+      ref.invalidate(deleteRecordProvider);
       if (mounted) {
+        setState(() {
+          _weights.clear();
+          _initialized = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('导入成功')),
         );
