@@ -27,6 +27,18 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Setup release keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/${{ secrets.STORE_FILE_NAME }}
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=../${{ secrets.STORE_FILE_NAME }}
+          EOF
+          # Strip accidental leading whitespace from heredoc lines
+          sed -i 's/^[[:space:]]*//' android/key.properties
+
       - name: Run drift code generation
         run: dart run build_runner build --delete-conflicting-outputs
 

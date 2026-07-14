@@ -57,3 +57,6 @@ docs/
 
 # 原始动作库 clone（使用处理后的 assets/exercises）
 exercises-dataset/
+
+# Git worktrees
+.worktrees/
