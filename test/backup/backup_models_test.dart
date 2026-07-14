@@ -12,7 +12,7 @@ Map<String, dynamic> validBackupJson({
     'format': format,
     'version': version,
     'exportedAt': '2026-07-14T10:00:00.000Z',
-    'appVersion': '1.1.4+15',
+    'appVersion': '1.2.0+16',
     'data': {
       'exercises': exercises ??
           [
@@ -145,7 +145,7 @@ void main() {
       final json = validBackupJson();
       final file = validateBackup(json);
       expect(file.exportedAt, '2026-07-14T10:00:00.000Z');
-      expect(file.appVersion, '1.1.4+15');
+      expect(file.appVersion, '1.2.0+16');
       expect(file.data.exercises.length, 2);
       expect(file.data.exercises[0].name, '杠铃卧推');
       expect(file.data.exercises[0].datasetId, '0001');

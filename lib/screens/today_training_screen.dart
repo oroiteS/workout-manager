@@ -98,6 +98,9 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
     try {
       final service = ref.read(backupServiceProvider);
       await service.importFromJsonString(content);
+      if (!mounted) {
+        return;
+      }
       ref.invalidate(todayExercisesProvider);
       ref.invalidate(templateProvider);
       ref.invalidate(templateByDayProvider);
@@ -111,15 +114,13 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
       ref.invalidate(lastWeightsProvider);
       ref.invalidate(lastTrainedDateProvider);
       ref.invalidate(deleteRecordProvider);
-      if (mounted) {
-        setState(() {
-          _weights.clear();
-          _initialized = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('导入成功')),
-        );
-      }
+      setState(() {
+        _weights.clear();
+        _initialized = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('导入成功')),
+      );
     } on BackupParseException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -179,7 +180,7 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
           ),
           const Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.1.4', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.2.0', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
