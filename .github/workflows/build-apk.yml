@@ -7,6 +7,9 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,6 +44,9 @@ jobs:
 
       - name: Run drift code generation
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze
 
       - name: Run tests
         run: flutter test
