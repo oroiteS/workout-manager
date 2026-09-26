@@ -59,4 +59,70 @@ void main() {
     final all = await dao.getAll();
     expect(all.length, 2);
   });
+
+  group('replaceAll', () {
+    test('整周替换并按给定顺序写入 sort_order', () async {
+      await dao.addExercise(5, '旧动作');
+
+      await dao.replaceAll({
+        1: ['动作B', '动作A'],
+        3: ['卷腹'],
+      });
+
+      final mon = await dao.getByDay(1);
+      expect(mon.map((e) => e.exerciseName), ['动作B', '动作A']);
+      expect(mon.map((e) => e.sortOrder), [0, 1]);
+      expect((await dao.getByDay(3)).map((e) => e.exerciseName), ['卷腹']);
+      expect(await dao.getByDay(5), isEmpty);
+    });
+
+    test('不删除任何训练记录', () async {
+      await dao.addExercise(1, '卧推');
+      final benchId = (await dao.getByDay(1)).first.exerciseId;
+      await db.recordDao.upsertRecord(
+          benchId, '卧推', 60, DateTime(2026, 1, 1));
+      await db.recordDao.upsertRecord(
+          benchId, '卧推', 65, DateTime(2026, 1, 2));
+
+      await dao.replaceAll({
+        1: ['深蹲'],
+        2: ['硬拉'],
+      });
+
+      final records = await db.recordDao.getAllForBackup();
+      expect(records.length, 2);
+      expect(records.every((r) => r.exerciseName == '卧推'), true);
+      expect(records.every((r) => r.exerciseId == benchId), true);
+      expect((await dao.getByDay(1)).map((e) => e.exerciseName), ['深蹲']);
+    });
+
+    test('保留已有动作 id，记录仍能对上', () async {
+      await dao.addExercise(1, '卧推');
+      final benchId = (await dao.getByDay(1)).first.exerciseId;
+      await db.recordDao.upsertRecord(
+          benchId, '卧推', 60, DateTime(2026, 1, 1));
+
+      await dao.replaceAll({1: ['卧推'], 4: ['飞鸟']});
+
+      expect((await dao.getByDay(1)).first.exerciseId, benchId);
+      final exercises = await db.exerciseDao.getAll();
+      expect(exercises.firstWhere((e) => e.name == '卧推').id, benchId);
+      expect((await db.recordDao.getAllForBackup()).length, 1);
+    });
+
+    test('库内同名动作绑定 datasetId 以显示示意图', () async {
+      await db.catalogDao.importCatalog({
+        'catalog_version': 1,
+        'exercises': [
+          {'dataset_id': 'd1', 'name_zh': '杠铃卧推'},
+        ],
+      });
+
+      await dao.replaceAll({1: ['杠铃卧推']});
+
+      final exerciseId = (await dao.getByDay(1)).first.exerciseId;
+      final exercise = await db.exerciseDao.getById(exerciseId);
+      expect(exercise?.datasetId, 'd1');
+    });
+  });
 }

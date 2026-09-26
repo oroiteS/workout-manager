@@ -101,4 +101,30 @@ class TemplateDao extends DatabaseAccessor<AppDatabase> with _$TemplateDaoMixin 
   Future<void> deleteAll() async {
     await delete(weekTemplate).go();
   }
+
+  /// 用 [exercisesByDay] 整周替换当前计划（day 1-7 → 动作名，按列表顺序设定 sort_order）。
+  ///
+  /// 只写 `week_template`，不改动 `training_record`：历史记录与动作库条目均保留，
+  /// 仅按中文名复用或新建动作（并尝试绑定库内 datasetId 以显示示意图）。
+  Future<void> replaceAll(Map<int, List<String>> exercisesByDay) {
+    return attachedDatabase.transaction(() async {
+      await deleteAll();
+      for (final entry in exercisesByDay.entries) {
+        var order = 0;
+        for (final name in entry.value) {
+          final hit =
+              await attachedDatabase.catalogDao.findByNameZh(name);
+          final exerciseId = await attachedDatabase.exerciseDao
+              .ensureExercise(name: name, datasetId: hit?.datasetId);
+          await into(weekTemplate).insert(
+            WeekTemplateCompanion.insert(
+              dayOfWeek: entry.key,
+              exerciseId: exerciseId,
+              sortOrder: Value(order++),
+            ),
+          );
+        }
+      }
+    });
+  }
 }

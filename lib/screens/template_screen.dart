@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workout_manager/plan/plan_import.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
 import 'package:workout_manager/widgets/catalog_browser.dart';
 import 'package:workout_manager/widgets/catalog_browser_mode.dart';
@@ -19,6 +23,11 @@ class TemplateScreen extends ConsumerWidget {
         title: const Text('周训练模板'),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.file_upload_outlined, size: 20),
+            tooltip: '从 CSV 导入计划',
+            onPressed: () => _importCsv(context, ref),
+          ),
           Consumer(
             builder: (_, ref, __) => IconButton(
               icon: Icon(ref.watch(themeModeProvider) == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode, size: 20),
@@ -30,7 +39,7 @@ class TemplateScreen extends ConsumerWidget {
           ),
           const Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.2.0', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.3.0', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
@@ -74,6 +83,157 @@ class TemplateScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _importCsv(BuildContext context, WidgetRef ref) async {
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: '选择计划 CSV',
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+    );
+    if (result == null || result.files.isEmpty || !context.mounted) return;
+
+    final path = result.files.single.path;
+    if (path == null) {
+      _showSnack(context, '无法读取文件路径');
+      return;
+    }
+
+    final ParsedPlan plan;
+    try {
+      plan = parsePlanCsv(await File(path).readAsString());
+    } on PlanCsvException catch (e) {
+      if (!context.mounted) return;
+      _showSnack(context, '解析失败: ${e.message}');
+      return;
+    } catch (e) {
+      if (!context.mounted) return;
+      _showSnack(context, '读取文件失败: $e');
+      return;
+    }
+    if (!context.mounted) return;
+
+    final db = ref.read(databaseProvider);
+    final current = await db.templateDao.getAll();
+    if (!context.mounted) return;
+
+    final diff = buildPlanDiff(
+      [
+        for (final t in current)
+          (dayOfWeek: t.dayOfWeek, exerciseName: t.exerciseName),
+      ],
+      plan,
+    );
+    if (!diff.hasChanges) {
+      _showSnack(context, 'CSV 内容与当前计划相同');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _buildDiffDialog(ctx, diff),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await db.templateDao.replaceAll(plan.exercisesByDay);
+    } catch (e) {
+      if (!context.mounted) return;
+      _showSnack(context, '导入失败: $e');
+      return;
+    }
+    if (!context.mounted) return;
+
+    ref.invalidate(templateProvider);
+    ref.invalidate(templateByDayProvider);
+    ref.invalidate(todayExercisesProvider);
+    ref.invalidate(allExercisesProvider);
+    _showSnack(context, '已导入 ${plan.exerciseCount} 个动作');
+  }
+
+  Widget _buildDiffDialog(BuildContext context, PlanDiff diff) {
+    return AlertDialog(
+      title: const Text('导入周计划'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'CSV 共 ${diff.exerciseCount} 个动作，'
+                '新增 ${diff.totalAdded}、移除 ${diff.totalRemoved}，'
+                '将替换整个周计划。',
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '只改周计划，不会删除任何训练记录。',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              if (diff.clearedDays.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '以下 ${diff.clearedDays.length} 天将被清空：'
+                  '${diff.clearedDays.map((d) => _dayLabels[d - 1]).join('、')}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              for (final d in diff.days) ...[
+                Text(
+                  _dayLabels[d.day - 1],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (d.kept.isNotEmpty)
+                  Text(
+                    '  保留 ${d.kept.length} 个',
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                for (final n in d.added)
+                  Text(
+                    '  + $n',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                for (final n in d.removed)
+                  Text(
+                    '  - $n',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('替换导入'),
+        ),
+      ],
+    );
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _onAdd(
