@@ -22,7 +22,7 @@ void main() {
 
     expect(map['format'], BackupFile.format);
     expect(map['version'], BackupFile.version);
-    expect(map['appVersion'], '1.2.0+16');
+    expect(map['appVersion'], '1.3.0+17');
     expect(map['exportedAt'], isA<String>());
 
     final data = map['data'] as Map<String, dynamic>;
@@ -86,7 +86,7 @@ void main() {
       'format': BackupFile.format,
       'version': BackupFile.version,
       'exportedAt': '2026-07-14T10:00:00.000Z',
-      'appVersion': '1.2.0+16',
+      'appVersion': '1.3.0+17',
       'data': {
         'exercises': [
           {'id': 1, 'name': '杠铃卧推', 'datasetId': null},
@@ -146,7 +146,7 @@ void main() {
       'format': BackupFile.format,
       'version': BackupFile.version,
       'exportedAt': '2026-07-14T10:00:00.000Z',
-      'appVersion': '1.2.0+16',
+      'appVersion': '1.3.0+17',
       'data': {
         'exercises': [
           {'id': 1, 'name': '杠铃卧推', 'datasetId': null},
@@ -226,7 +226,7 @@ void main() {
       'format': BackupFile.format,
       'version': BackupFile.version,
       'exportedAt': '2026-07-14T12:00:00.000Z',
-      'appVersion': '1.2.0+16',
+      'appVersion': '1.3.0+17',
       'data': {
         'exercises': [
           {'id': 10, 'name': '新动作A', 'datasetId': '0001'},

@@ -47,7 +47,7 @@ class BackupService {
 
     final backup = BackupFile(
       exportedAt: now.toUtc().toIso8601String(),
-      appVersion: '1.2.0+16',
+      appVersion: '1.3.0+17',
       data: BackupData(
         exercises: exercisesRows,
         weekTemplate: templateRows,
