@@ -7,6 +7,9 @@ class DayTemplateCard extends StatelessWidget {
   final Future<void> Function() onAdd;
   final Future<void> Function(int exerciseId, String exerciseName) onDelete;
 
+  /// 循环模板里 dayOfWeek 是循环第几天，与星期无关，置为 false 关闭「今天」高亮。
+  final bool showToday;
+
   const DayTemplateCard({
     super.key,
     required this.dayLabel,
@@ -14,6 +17,7 @@ class DayTemplateCard extends StatelessWidget {
     required this.exercises,
     required this.onAdd,
     required this.onDelete,
+    this.showToday = true,
   });
 
   @override
@@ -75,5 +79,5 @@ class DayTemplateCard extends StatelessWidget {
     );
   }
 
-  bool _isToday() => DateTime.now().weekday == dayOfWeek;
+  bool _isToday() => showToday && DateTime.now().weekday == dayOfWeek;
 }

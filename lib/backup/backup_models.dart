@@ -87,15 +87,95 @@ class TrainingRecordRowData {
       };
 }
 
+class CycleTemplateRowData {
+  final int dayIndex;
+  final int exerciseId;
+  final int sortOrder;
+
+  CycleTemplateRowData({
+    required this.dayIndex,
+    required this.exerciseId,
+    required this.sortOrder,
+  });
+
+  factory CycleTemplateRowData.fromJson(Map<String, dynamic> json) =>
+      CycleTemplateRowData(
+        dayIndex: json['dayIndex'] as int,
+        exerciseId: json['exerciseId'] as int,
+        sortOrder: json['sortOrder'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'dayIndex': dayIndex,
+        'exerciseId': exerciseId,
+        'sortOrder': sortOrder,
+      };
+
+  CycleTemplateCompanion toCompanion() => CycleTemplateCompanion(
+        dayIndex: Value(dayIndex),
+        exerciseId: Value(exerciseId),
+        sortOrder: Value(sortOrder),
+      );
+}
+
+class CycleSelectionRowData {
+  final String date;
+  final String kind;
+  final int? dayIndex;
+
+  CycleSelectionRowData({
+    required this.date,
+    required this.kind,
+    this.dayIndex,
+  });
+
+  factory CycleSelectionRowData.fromJson(Map<String, dynamic> json) =>
+      CycleSelectionRowData(
+        date: json['date'] as String,
+        kind: json['kind'] as String,
+        dayIndex: json['dayIndex'] as int?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'date': date,
+        'kind': kind,
+        'dayIndex': dayIndex,
+      };
+}
+
+class CycleSettingsData {
+  final String planMode;
+  final int? dayCount;
+
+  CycleSettingsData({required this.planMode, this.dayCount});
+
+  factory CycleSettingsData.fromJson(Map<String, dynamic> json) =>
+      CycleSettingsData(
+        planMode: json['planMode'] as String,
+        dayCount: json['dayCount'] as int?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'planMode': planMode,
+        'dayCount': dayCount,
+      };
+}
+
 class BackupData {
   final List<BackupExercise> exercises;
   final List<WeekTemplateRowData> weekTemplate;
   final List<TrainingRecordRowData> trainingRecords;
+  final List<CycleTemplateRowData> cycleTemplate;
+  final List<CycleSelectionRowData> cycleSelections;
+  final CycleSettingsData? cycleSettings;
 
   const BackupData({
     required this.exercises,
     required this.weekTemplate,
     required this.trainingRecords,
+    this.cycleTemplate = const [],
+    this.cycleSelections = const [],
+    this.cycleSettings,
   });
 
   factory BackupData.fromJson(Map<String, dynamic> json) => BackupData(
@@ -110,18 +190,40 @@ class BackupData {
               (e) => TrainingRecordRowData.fromJson(e as Map<String, dynamic>),
             )
             .toList(),
+        cycleTemplate: (json['cycleTemplate'] as List? ?? const [])
+            .map(
+              (e) => CycleTemplateRowData.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+        cycleSelections: (json['cycleSelections'] as List? ?? const [])
+            .map(
+              (e) =>
+                  CycleSelectionRowData.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+        cycleSettings: json['cycleSettings'] == null
+            ? null
+            : CycleSettingsData.fromJson(
+                json['cycleSettings'] as Map<String, dynamic>,
+              ),
       );
 
   Map<String, dynamic> toJson() => {
         'exercises': exercises.map((e) => e.toJson()).toList(),
         'weekTemplate': weekTemplate.map((e) => e.toJson()).toList(),
         'trainingRecords': trainingRecords.map((e) => e.toJson()).toList(),
+        'cycleTemplate': cycleTemplate.map((e) => e.toJson()).toList(),
+        'cycleSelections': cycleSelections.map((e) => e.toJson()).toList(),
+        'cycleSettings': cycleSettings?.toJson(),
       };
 }
 
 class BackupFile {
   static const String format = 'workout-manager-backup';
-  static const int version = 1;
+
+  /// v1：无循环数据；v2：含 cycleTemplate/cycleSelections/cycleSettings。
+  static const int version = 2;
+  static const int minVersion = 1;
 
   final String exportedAt;
   final String appVersion;
@@ -164,7 +266,9 @@ BackupFile validateBackup(Map<String, dynamic> json) {
     throw BackupParseException('不支持的备份格式');
   }
   final version = json['version'];
-  if (version == null || version != BackupFile.version) {
+  if (version is! int ||
+      version < BackupFile.minVersion ||
+      version > BackupFile.version) {
     throw BackupParseException('不支持的备份版本: $version');
   }
   final data = json['data'];
@@ -178,6 +282,14 @@ BackupFile validateBackup(Map<String, dynamic> json) {
       weekTemplate is! List ||
       trainingRecords is! List) {
     throw BackupParseException('备份文件结构不完整');
+  }
+  final cycleTemplate = data['cycleTemplate'];
+  final cycleSelections = data['cycleSelections'];
+  final cycleSettings = data['cycleSettings'];
+  if ((cycleTemplate != null && cycleTemplate is! List) ||
+      (cycleSelections != null && cycleSelections is! List) ||
+      (cycleSettings != null && cycleSettings is! Map<String, dynamic>)) {
+    throw BackupParseException('循环数据格式错误');
   }
 
   final exerciseIds = <int>{};
@@ -232,6 +344,78 @@ BackupFile validateBackup(Map<String, dynamic> json) {
     }
   }
 
+  const validKinds = {'day', 'cardio', 'rest'};
+  final cycleTemplateList = (cycleTemplate as List? ?? const []);
+  final cycleSelectionsList = (cycleSelections as List? ?? const []);
+  int? cycleDayCount;
+  if (cycleSettings != null) {
+    final planMode = cycleSettings['planMode'];
+    final dayCount = cycleSettings['dayCount'];
+    if (planMode is! String || (planMode != 'weekly' && planMode != 'cycle')) {
+      throw BackupParseException('cycleSettings planMode 非法: $planMode');
+    }
+    if (dayCount is! int || dayCount < 1 || dayCount > CycleDao.maxDayCount) {
+      throw BackupParseException('cycleSettings dayCount 非法: $dayCount');
+    }
+    cycleDayCount = dayCount;
+  } else if (cycleTemplateList.isNotEmpty || cycleSelectionsList.isNotEmpty) {
+    throw BackupParseException('存在循环数据但缺少 cycleSettings');
+  }
+  final seenPairs = <String>{};
+  for (final row in cycleTemplateList) {
+    if (row is! Map<String, dynamic>) {
+      throw BackupParseException('cycleTemplate 元素格式错误');
+    }
+    final dayIndex = row['dayIndex'];
+    final exerciseId = row['exerciseId'];
+    final sortOrder = row['sortOrder'];
+    if (dayIndex is! int || exerciseId is! int || sortOrder is! int) {
+      throw BackupParseException('cycleTemplate 字段类型错误');
+    }
+    if (dayIndex < 1) {
+      throw BackupParseException('cycleTemplate dayIndex 非法: $dayIndex');
+    }
+    if (cycleDayCount != null && dayIndex > cycleDayCount) {
+      throw BackupParseException(
+        'cycleTemplate dayIndex $dayIndex 超出循环天数 $cycleDayCount',
+      );
+    }
+    if (!exerciseIds.contains(exerciseId)) {
+      throw BackupParseException(
+        'cycleTemplate 引用了不存在的 exerciseId: $exerciseId',
+      );
+    }
+    if (!seenPairs.add('$dayIndex:$exerciseId')) {
+      throw BackupParseException(
+        'cycleTemplate 存在重复条目: 第 $dayIndex 天 / exerciseId $exerciseId',
+      );
+    }
+  }
+  final seenDates = <String>{};
+  for (final row in cycleSelectionsList) {
+    if (row is! Map<String, dynamic>) {
+      throw BackupParseException('cycleSelections 元素格式错误');
+    }
+    final date = row['date'];
+    final kind = row['kind'];
+    final dayIndex = row['dayIndex'];
+    if (date is! String || kind is! String || dayIndex is! int?) {
+      throw BackupParseException('cycleSelections 字段类型错误');
+    }
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date)) {
+      throw BackupParseException('cycleSelections date 格式错误: $date');
+    }
+    if (!validKinds.contains(kind)) {
+      throw BackupParseException('cycleSelections kind 非法: $kind');
+    }
+    if (kind == 'day' && dayIndex == null) {
+      throw BackupParseException('cycleSelections 训练日缺少 dayIndex');
+    }
+    if (!seenDates.add(date)) {
+      throw BackupParseException('cycleSelections 存在重复日期: $date');
+    }
+  }
+
   final exercisesParsed = exercises
       .map((e) => BackupExercise.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -241,6 +425,12 @@ BackupFile validateBackup(Map<String, dynamic> json) {
   final trainingRecordsParsed = trainingRecords
       .map((e) => TrainingRecordRowData.fromJson(e as Map<String, dynamic>))
       .toList();
+  final cycleTemplateParsed = cycleTemplateList
+      .map((e) => CycleTemplateRowData.fromJson(e as Map<String, dynamic>))
+      .toList();
+  final cycleSelectionsParsed = cycleSelectionsList
+      .map((e) => CycleSelectionRowData.fromJson(e as Map<String, dynamic>))
+      .toList();
 
   return BackupFile(
     exportedAt: json['exportedAt'] as String? ?? '',
@@ -249,6 +439,11 @@ BackupFile validateBackup(Map<String, dynamic> json) {
       exercises: exercisesParsed,
       weekTemplate: weekTemplateParsed,
       trainingRecords: trainingRecordsParsed,
+      cycleTemplate: cycleTemplateParsed,
+      cycleSelections: cycleSelectionsParsed,
+      cycleSettings: cycleSettings == null
+          ? null
+          : CycleSettingsData.fromJson(cycleSettings),
     ),
   );
 }

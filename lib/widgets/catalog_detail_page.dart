@@ -4,20 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/catalog/filter_labels.dart';
 import 'package:workout_manager/database/database.dart';
-import 'package:workout_manager/providers/workout_providers.dart';
 import 'package:workout_manager/widgets/catalog_browser_mode.dart';
+import 'package:workout_manager/widgets/pick_target.dart';
 
 class CatalogDetailPage extends ConsumerWidget {
   final CatalogExercise exercise;
   final CatalogBrowserMode mode;
-  final int? dayOfWeek;
+  final PickTarget? pickTarget;
   final void Function(CatalogExercise ex)? onAdded;
 
   const CatalogDetailPage({
     super.key,
     required this.exercise,
     this.mode = CatalogBrowserMode.browse,
-    this.dayOfWeek,
+    this.pickTarget,
     this.onAdded,
   });
 
@@ -42,19 +42,16 @@ class CatalogDetailPage extends ConsumerWidget {
   }
 
   Future<void> _addToTemplate(BuildContext context, WidgetRef ref) async {
-    final day = dayOfWeek;
-    assert(day != null, 'CatalogBrowserMode.pick requires dayOfWeek');
-    if (day == null) return;
+    final target = pickTarget;
+    assert(target != null, 'CatalogBrowserMode.pick requires pickTarget');
+    if (target == null) return;
     try {
-      final db = ref.read(databaseProvider);
-      await db.templateDao.addExercise(
-        day,
+      await addExerciseToTarget(
+        ref,
+        target,
         exercise.nameZh,
         datasetId: exercise.datasetId,
       );
-      ref.invalidate(templateProvider);
-      ref.invalidate(templateByDayProvider(day));
-      ref.invalidate(todayExercisesProvider);
       onAdded?.call(exercise);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

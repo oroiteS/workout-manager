@@ -42,4 +42,16 @@ void main() {
     final ex = await db.exerciseDao.getById(day.first.exerciseId);
     expect(ex!.datasetId, '0001');
   });
+
+  test('deleteById 级联删除周模板与循环模板', () async {
+    final id = await db.exerciseDao.add('杠铃卧推');
+    await db.templateDao.addExercise(1, '杠铃卧推');
+    await db.cycleDao.addExercise(2, '杠铃卧推');
+
+    await db.exerciseDao.deleteById(id);
+
+    expect(await db.templateDao.getByDay(1), isEmpty);
+    expect(await db.cycleDao.getByDay(2), isEmpty);
+    expect(await db.exerciseDao.getById(id), isNull);
+  });
 }

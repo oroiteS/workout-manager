@@ -1,4 +1,4 @@
-// 周计划 CSV 解析与差异计算（纯逻辑，不依赖数据库）。
+// 计划 CSV 解析与差异计算（纯逻辑，不依赖数据库）。
 //
 // CSV 格式：行式两列 `day,exercise`，一天可有多行，行序即当天动作顺序。
 // 例：
@@ -6,7 +6,9 @@
 //   1,杠铃深蹲
 //   1,腿举
 //   2,杠铃卧推
-// `day` 接受 `1`-`7`、`周一`-`周日`、`星期一`-`星期日`。
+// 计划模式（周模板）：`day` 接受 `1`-`7`、`周一`-`周日`、`星期一`-`星期日`。
+// 循环模式（循环模板）：`day` 接受 `1`-`N`（N=循环天数）、`第1天`-`第N天`；
+//   遇到星期标签（周一/星期X）会明确报错，避免与周计划语义混淆。
 
 class PlanCsvException implements Exception {
   final String message;
@@ -16,23 +18,36 @@ class PlanCsvException implements Exception {
   String toString() => message;
 }
 
-/// 解析结果：day(1-7) → 动作名列表（按文件行序，同日去重保留首次出现）。
+/// 解析结果：day(1..dayCount) → 动作名列表（按文件行序，同日去重保留首次出现）。
 class ParsedPlan {
   final Map<int, List<String>> exercisesByDay;
 
-  const ParsedPlan(this.exercisesByDay);
+  /// 计划覆盖的天数：周模式 7，循环模式为循环天数 N。
+  final int dayCount;
+
+  const ParsedPlan(this.exercisesByDay, {this.dayCount = 7});
 
   int get exerciseCount =>
       exercisesByDay.values.fold(0, (sum, names) => sum + names.length);
 
   Set<int> get days => exercisesByDay.keys.toSet();
 
-  /// CSV 未覆盖的天（整周替换语义下会被清空）。
-  List<int> get missingDays =>
-      [for (var d = 1; d <= 7; d++) if (!exercisesByDay.containsKey(d)) d];
+  /// CSV 未覆盖的天（整表替换语义下会被清空）。
+  List<int> get missingDays => [
+        for (var d = 1; d <= dayCount; d++)
+          if (!exercisesByDay.containsKey(d)) d
+      ];
 }
 
-ParsedPlan parsePlanCsv(String raw) {
+/// 解析计划 CSV。
+///
+/// [dayCount] 目标模板天数（计划模式固定 7；循环模式传循环天数 N）。
+/// [cycle] 循环模式：`day` 为循环第几天，不接受星期标签，超出 [dayCount] 报错。
+ParsedPlan parsePlanCsv(
+  String raw, {
+  int dayCount = 7,
+  bool cycle = false,
+}) {
   var input = raw;
   if (input.startsWith('\uFEFF')) {
     input = input.substring(1);
@@ -44,7 +59,10 @@ ParsedPlan parsePlanCsv(String raw) {
   }
 
   var dataRows = rows;
-  if (_parseDay(rows.first.fields[0]) == null) {
+  if (_tryParseDay(rows.first.fields[0], dayCount, cycle: cycle) == null) {
+    if (cycle && _isWeekdayLabel(rows.first.fields[0])) {
+      throw PlanCsvException(_weekdayError(rows.first.fields[0], dayCount));
+    }
     // 首行 day 列无法识别为天数 → 视为表头并跳过
     dataRows = rows.skip(1).toList();
     if (dataRows.isEmpty) {
@@ -59,11 +77,15 @@ ParsedPlan parsePlanCsv(String raw) {
         '第 ${row.line} 行有 ${row.fields.length} 列，只支持两列 day,exercise 格式',
       );
     }
-    final day = _parseDay(row.fields[0]);
+    final cell = row.fields[0].trim();
+    if (cycle && _isWeekdayLabel(cell)) {
+      throw PlanCsvException('第 ${row.line} 行 ${_weekdayError(cell, dayCount)}');
+    }
+    final day = _tryParseDay(cell, dayCount, cycle: cycle);
     if (day == null) {
       throw PlanCsvException(
-        '第 ${row.line} 行无法识别天数「${row.fields[0].trim()}」，'
-        '应为 1-7 或 周一-周日',
+        '第 ${row.line} 行无法识别天数「$cell」，'
+        '${cycle ? '应为 1-$dayCount 或 第1天-第$dayCount天' : '应为 1-7 或 周一-周日'}',
       );
     }
     final name = row.fields[1].trim();
@@ -81,18 +103,28 @@ ParsedPlan parsePlanCsv(String raw) {
   }
 
   final sorted = <int, List<String>>{};
-  for (var d = 1; d <= 7; d++) {
+  for (var d = 1; d <= dayCount; d++) {
     if (byDay.containsKey(d)) sorted[d] = byDay[d]!;
   }
-  return ParsedPlan(sorted);
+  return ParsedPlan(sorted, dayCount: dayCount);
 }
 
-/// 解析天数：`1`-`7` / `周一`-`周日` / `星期一`-`星期日`。
-int? _parseDay(String cell) {
+/// 解析天数：`1`-`[dayCount]` / `第1天`-`第N天`；计划模式另接受周X/星期X。
+/// [cycle] 为 true 时不接受星期标签（返回 null，由调用方给出针对性报错）。
+int? _tryParseDay(String cell, int dayCount, {required bool cycle}) {
   final t = cell.trim();
   if (t.isEmpty) return null;
+
+  final m = RegExp(r'^第(\d+)天$').firstMatch(t);
+  if (m != null) {
+    final n = int.parse(m.group(1)!);
+    return (n >= 1 && n <= dayCount) ? n : null;
+  }
+
   final n = int.tryParse(t);
-  if (n != null) return (n >= 1 && n <= 7) ? n : null;
+  if (n != null) return (n >= 1 && n <= dayCount) ? n : null;
+
+  if (cycle) return null;
 
   const week = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 7, '天': 7};
   for (final prefix in ['星期', '周']) {
@@ -102,6 +134,22 @@ int? _parseDay(String cell) {
   }
   return null;
 }
+
+/// 是否为 `周一`/`星期日` 形式的星期标签。
+bool _isWeekdayLabel(String cell) {
+  const chars = {'一', '二', '三', '四', '五', '六', '日', '天'};
+  final t = cell.trim();
+  for (final prefix in ['星期', '周']) {
+    if (t.length == prefix.length + 1 && t.startsWith(prefix)) {
+      return chars.contains(t[prefix.length]);
+    }
+  }
+  return false;
+}
+
+String _weekdayError(String cell, int dayCount) =>
+    '循环模式不支持「${cell.trim()}」这类星期标签，'
+    '请使用 1-$dayCount 或「第1天」-「第$dayCount天」（或切换到计划模式）';
 
 class _CsvRow {
   final int line;
@@ -240,7 +288,7 @@ PlanDiff buildPlanDiff(
   }
 
   final dayDiffs = <DayPlanDiff>[];
-  for (var day = 1; day <= 7; day++) {
+  for (var day = 1; day <= next.dayCount; day++) {
     final before = currentByDay[day] ?? const <String>[];
     final after = next.exercisesByDay[day] ?? const <String>[];
     final beforeSet = before.toSet();

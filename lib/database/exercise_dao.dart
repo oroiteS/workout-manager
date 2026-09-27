@@ -51,6 +51,9 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase> with _$ExerciseDaoMixin 
     await (delete(attachedDatabase.weekTemplate)
           ..where((t) => t.exerciseId.equals(id)))
         .go();
+    await (delete(attachedDatabase.cycleTemplate)
+          ..where((t) => t.exerciseId.equals(id)))
+        .go();
     await (delete(attachedDatabase.trainingRecord)
           ..where((t) => t.exerciseId.equals(id)))
         .go();

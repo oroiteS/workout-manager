@@ -186,3 +186,84 @@ final saveRecordsForDateProvider =
     ref.invalidate(recordsForDateProvider);
   },
 );
+
+// ---------- 循环模式 ----------
+
+final planModeProvider = FutureProvider<PlanMode>((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.cycleDao.getPlanMode();
+});
+
+final cycleDayCountProvider = FutureProvider<int>((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.cycleDao.getDayCount();
+});
+
+final cycleTemplateProvider = FutureProvider<List<TemplateWithExercise>>((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.cycleDao.getAll();
+});
+
+final cycleByDayProvider =
+    FutureProvider.family<List<TemplateWithExercise>, int>((ref, dayIndex) {
+  final db = ref.watch(databaseProvider);
+  return db.cycleDao.getByDay(dayIndex);
+});
+
+class CycleTodayState {
+  /// 循环总天数。
+  final int dayCount;
+
+  /// 今天的建议循环天（基于今天之前的最近训练日选择）。
+  final int recommendedDay;
+
+  /// 今天的已选内容；为 null 时用户尚未选择。
+  final CycleSelection? selection;
+
+  /// 仅当 [selection] 是训练日时非空，为该天的循环动作。
+  final List<TemplateWithExercise> exercises;
+
+  const CycleTodayState({
+    required this.dayCount,
+    required this.recommendedDay,
+    required this.selection,
+    required this.exercises,
+  });
+}
+
+final cycleTodayStateProvider = FutureProvider<CycleTodayState>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final dayCount = await ref.watch(cycleDayCountProvider.future);
+  final now = DateTime.now();
+  final selection = await db.cycleDao.getSelection(dateKeyOf(now));
+  final recommendedDay =
+      await db.cycleDao.recommendDayIndex(now, dayCount: dayCount);
+
+  // 已选训练日被缩短的循环删除时视为未选择。
+  final validSelection = selection != null &&
+          selection.kind == CycleSelectionKind.day &&
+          (selection.dayIndex == null || selection.dayIndex! > dayCount)
+      ? null
+      : selection;
+
+  final exercises = validSelection != null &&
+          validSelection.kind == CycleSelectionKind.day
+      ? await db.cycleDao.getByDay(validSelection.dayIndex!)
+      : const <TemplateWithExercise>[];
+
+  return CycleTodayState(
+    dayCount: dayCount,
+    recommendedDay: recommendedDay,
+    selection: validSelection,
+    exercises: exercises,
+  );
+});
+
+/// 循环相关数据变更后统一刷新。
+void invalidateCycleProviders(WidgetRef ref) {
+  ref.invalidate(planModeProvider);
+  ref.invalidate(cycleDayCountProvider);
+  ref.invalidate(cycleTemplateProvider);
+  ref.invalidate(cycleByDayProvider);
+  ref.invalidate(cycleTodayStateProvider);
+}

@@ -5,6 +5,9 @@ Map<String, dynamic> validBackupJson({
   List<Map<String, dynamic>>? exercises,
   List<Map<String, dynamic>>? weekTemplate,
   List<Map<String, dynamic>>? trainingRecords,
+  List<Map<String, dynamic>>? cycleTemplate,
+  List<Map<String, dynamic>>? cycleSelections,
+  Map<String, dynamic>? cycleSettings,
   String format = 'workout-manager-backup',
   int version = 1,
 }) {
@@ -33,6 +36,9 @@ Map<String, dynamic> validBackupJson({
               'trainedAt': '2026-07-01T08:00:00.000',
             },
           ],
+      if (cycleTemplate != null) 'cycleTemplate': cycleTemplate,
+      if (cycleSelections != null) 'cycleSelections': cycleSelections,
+      if (cycleSettings != null) 'cycleSettings': cycleSettings,
     },
   };
 }
@@ -178,6 +184,250 @@ void main() {
       expect(file.data.trainingRecords[0].weight, 60.5);
       expect(file.toJson()['format'], BackupFile.format);
       expect(file.toJson()['version'], BackupFile.version);
+    });
+
+    test('v1 旧备份（无循环字段）仍可解析', () {
+      final json = validBackupJson(version: 1);
+      final file = validateBackup(json);
+      expect(file.data.cycleTemplate, isEmpty);
+      expect(file.data.cycleSelections, isEmpty);
+      expect(file.data.cycleSettings, isNull);
+    });
+
+    test('version 2 含循环字段返回解析结果', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleTemplate: [
+          {'dayIndex': 1, 'exerciseId': 1, 'sortOrder': 0},
+          {'dayIndex': 2, 'exerciseId': 2, 'sortOrder': 0},
+        ],
+        cycleSelections: [
+          {'date': '2026-07-01', 'kind': 'day', 'dayIndex': 1},
+          {'date': '2026-07-02', 'kind': 'cardio', 'dayIndex': null},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      final file = validateBackup(json);
+      expect(file.data.cycleTemplate.length, 2);
+      expect(file.data.cycleSelections.length, 2);
+      expect(file.data.cycleSettings?.planMode, 'cycle');
+      expect(file.data.cycleSettings?.dayCount, 3);
+      final outData = file.toJson()['data'] as Map<String, dynamic>;
+      expect(outData['cycleTemplate'], isA<List>());
+      expect(outData['cycleSelections'], isA<List>());
+      expect(outData['cycleSettings'], isA<Map<String, dynamic>>());
+    });
+
+    test('cycleTemplate 引用不存在的 exerciseId 抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleTemplate: [
+          {'dayIndex': 1, 'exerciseId': 999, 'sortOrder': 0},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('cycleTemplate 引用了不存在的 exerciseId'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleTemplate dayIndex 超出循环天数抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleTemplate: [
+          {'dayIndex': 5, 'exerciseId': 1, 'sortOrder': 0},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('超出循环天数'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleSelections 非法 kind 抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleSelections: [
+          {'date': '2026-07-01', 'kind': '游泳', 'dayIndex': null},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('kind 非法'),
+          ),
+        ),
+      );
+    });
+
+    test('训练日选择缺少 dayIndex 抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleSelections: [
+          {'date': '2026-07-01', 'kind': 'day', 'dayIndex': null},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('缺少 dayIndex'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleSettings planMode 非法抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleSettings: {'planMode': 'random', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('planMode 非法'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleSettings 缺少 planMode 抛出（而非 TypeError）', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleSettings: {'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('planMode 非法'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleSettings dayCount 超出上限抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 15},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('dayCount 非法'),
+          ),
+        ),
+      );
+    });
+
+    test('有循环数据但缺少 cycleSettings 抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleTemplate: [
+          {'dayIndex': 1, 'exerciseId': 1, 'sortOrder': 0},
+        ],
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('缺少 cycleSettings'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleTemplate 重复条目抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleTemplate: [
+          {'dayIndex': 1, 'exerciseId': 1, 'sortOrder': 0},
+          {'dayIndex': 1, 'exerciseId': 1, 'sortOrder': 1},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('重复条目'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleSelections 重复日期抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleSelections: [
+          {'date': '2026-07-01', 'kind': 'day', 'dayIndex': 1},
+          {'date': '2026-07-01', 'kind': 'rest', 'dayIndex': null},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('重复日期'),
+          ),
+        ),
+      );
+    });
+
+    test('cycleSelections date 非补零格式抛出', () {
+      final json = validBackupJson(
+        version: 2,
+        cycleSelections: [
+          {'date': '2026-7-1', 'kind': 'rest', 'dayIndex': null},
+        ],
+        cycleSettings: {'planMode': 'cycle', 'dayCount': 3},
+      );
+      expect(
+        () => validateBackup(json),
+        throwsA(
+          isA<BackupParseException>().having(
+            (e) => e.message,
+            'message',
+            contains('date 格式错误'),
+          ),
+        ),
+      );
     });
   });
 }

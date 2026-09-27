@@ -158,17 +158,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 
   Future<void> _retroAddRecords() async {
-    final templateExercises = await ref.read(templateByDayProvider(_selectedDay.weekday).future);
-    if (templateExercises.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${DateFormat('M月d日 EEEE', 'zh_CN').format(_selectedDay)} 的模板没有动作，请先去「周模板」添加')),
-        );
-      }
-      return;
-    }
-
-    if (!mounted) return;
+    final resolved = await _resolveRetroExercises();
+    if (resolved == null || !mounted) return;
+    final templateExercises = resolved.exercises;
 
     final controllers = <int, TextEditingController>{};
     for (final t in templateExercises) {
@@ -226,19 +218,135 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     if (result != null && result.isNotEmpty) {
       try {
         await ref.read(saveRecordsForDateProvider((date: _selectedDay, records: result)).future);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已补录 ${result.length} 个动作到 ${DateFormat('M月d日').format(_selectedDay)}')),
-          );
-        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('补录失败: $e'), backgroundColor: Colors.red),
           );
         }
+        return;
+      }
+
+      // 记录已保存；循环选择写入失败时单独提示，不谎报整体失败。
+      var message =
+          '已补录 ${result.length} 个动作到 ${DateFormat('M月d日').format(_selectedDay)}';
+      final cycleDayIndex = resolved.cycleDayIndex;
+      if (cycleDayIndex != null) {
+        try {
+          final db = ref.read(databaseProvider);
+          await db.cycleDao.setSelection(CycleSelection(
+            date: dateKeyOf(_selectedDay),
+            kind: CycleSelectionKind.day,
+            dayIndex: cycleDayIndex,
+          ));
+          ref.invalidate(cycleTodayStateProvider);
+        } catch (e) {
+          message = '已补录 ${result.length} 个动作，但循环选择写入失败: $e';
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
       }
     }
+  }
+
+  /// 计划模式下取所选日期星期的周模板；循环模式下让用户先选循环第几天。
+  /// 返回 null 表示取消或模板为空（空时已提示）；cycleDayIndex 仅循环模式非空。
+  Future<({int? cycleDayIndex, List<TemplateWithExercise> exercises})?>
+      _resolveRetroExercises() async {
+    final mode = await ref.read(planModeProvider.future);
+    if (mode == PlanMode.weekly) {
+      final exercises =
+          await ref.read(templateByDayProvider(_selectedDay.weekday).future);
+      if (exercises.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${DateFormat('M月d日 EEEE', 'zh_CN').format(_selectedDay)} 的模板没有动作，请先去「周模板」添加',
+              ),
+            ),
+          );
+        }
+        return null;
+      }
+      return (cycleDayIndex: null, exercises: exercises);
+    }
+
+    final dayIndex = await _pickCycleDay();
+    if (dayIndex == null) return null;
+    final exercises = await ref.read(cycleByDayProvider(dayIndex).future);
+    if (exercises.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('第$dayIndex天还没有动作，请先去「周模板」的循环模式添加')),
+        );
+      }
+      return null;
+    }
+    return (cycleDayIndex: dayIndex, exercises: exercises);
+  }
+
+  /// 循环模式补录时选择目标循环天；该日期已有训练日选择时默认选中它。
+  Future<int?> _pickCycleDay() async {
+    final dayCount = await ref.read(cycleDayCountProvider.future);
+    final db = ref.read(databaseProvider);
+    final selection = await db.cycleDao.getSelection(dateKeyOf(_selectedDay));
+    final recommended = await db.cycleDao.recommendDayIndex(
+      _selectedDay,
+      dayCount: dayCount,
+    );
+    final preselect = selection?.kind == CycleSelectionKind.day
+        ? selection!.dayIndex
+        : recommended;
+
+    if (!mounted) return null;
+    return showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 8),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  '补录循环中的哪一天？',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              ),
+              for (var i = 1; i <= dayCount; i++)
+                ListTile(
+                  leading: const Icon(Icons.fitness_center),
+                  title: Row(
+                    children: [
+                      Text('第$i天'),
+                      if (recommended == i) ...[
+                        const SizedBox(width: 8),
+                        Chip(
+                          label: const Text('建议', style: TextStyle(fontSize: 11)),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          padding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ],
+                  ),
+                  trailing: preselect == i
+                      ? Icon(Icons.check,
+                          color: Theme.of(ctx).colorScheme.primary)
+                      : null,
+                  onTap: () => Navigator.pop(ctx, i),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _editRecord(TrainingRecordData record) async {

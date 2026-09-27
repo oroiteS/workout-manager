@@ -271,4 +271,80 @@ void main() {
       catalogIdsBefore,
     );
   });
+
+  test('含循环数据 export → import → 循环配置与选择一致', () async {
+    final source = createMemoryDb();
+    addTearDown(() async => await source.close());
+
+    await source.exerciseDao.add('杠铃卧推');
+    await source.cycleDao.setPlanMode(PlanMode.cycle);
+    await source.cycleDao.setDayCount(4);
+    await source.cycleDao.addExercise(1, '杠铃卧推');
+    await source.cycleDao.addExercise(2, '深蹲');
+    await source.cycleDao.setSelection(const CycleSelection(
+      date: '2026-07-01',
+      kind: CycleSelectionKind.day,
+      dayIndex: 1,
+    ));
+    await source.cycleDao.setSelection(const CycleSelection(
+      date: '2026-07-02',
+      kind: CycleSelectionKind.cardio,
+    ));
+
+    final jsonString = await BackupService(source).exportToJson();
+    await service.importFromJsonString(jsonString);
+
+    expect(await db.cycleDao.getPlanMode(), PlanMode.cycle);
+    expect(await db.cycleDao.getDayCount(), 4);
+    final day1 = await db.cycleDao.getByDay(1);
+    expect(day1.map((e) => e.exerciseName), ['杠铃卧推']);
+    expect((await db.cycleDao.getByDay(2)).map((e) => e.exerciseName), ['深蹲']);
+    expect(
+      (await db.cycleDao.getSelection('2026-07-01'))?.dayIndex,
+      1,
+    );
+    expect(
+      (await db.cycleDao.getSelection('2026-07-02'))?.kind,
+      CycleSelectionKind.cardio,
+    );
+    // 循环建议基于已恢复的选择：2026-07-01 选了第 1 天 → 07-02 建议第 2 天
+    expect(
+      await db.cycleDao.recommendDayIndex(DateTime(2026, 7, 2), dayCount: 4),
+      2,
+    );
+  });
+
+  test('导入 v1 旧备份清空已有循环数据并复位模式', () async {
+    await db.exerciseDao.add('旧动作');
+    await db.cycleDao.setPlanMode(PlanMode.cycle);
+    await db.cycleDao.setDayCount(5);
+    await db.cycleDao.addExercise(1, '旧动作');
+    await db.cycleDao.setSelection(const CycleSelection(
+      date: '2026-07-01',
+      kind: CycleSelectionKind.day,
+      dayIndex: 1,
+    ));
+
+    final v1Json = jsonEncode({
+      'format': BackupFile.format,
+      'version': 1,
+      'exportedAt': '2026-07-14T10:00:00.000Z',
+      'appVersion': '1.3.0+17',
+      'data': {
+        'exercises': [
+          {'id': 1, 'name': '新动作', 'datasetId': null},
+        ],
+        'weekTemplate': <Map<String, dynamic>>[],
+        'trainingRecords': <Map<String, dynamic>>[],
+      },
+    });
+
+    await service.importFromJsonString(v1Json);
+
+    expect(await db.cycleDao.getPlanMode(), PlanMode.weekly);
+    expect(await db.cycleDao.getDayCount(), CycleDao.defaultDayCount);
+    expect(await db.cycleDao.getAll(), isEmpty);
+    expect(await db.cycleDao.getAllSelections(), isEmpty);
+    expect((await db.exerciseDao.getAll()).map((e) => e.name), ['新动作']);
+  });
 }

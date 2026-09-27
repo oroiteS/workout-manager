@@ -1528,6 +1528,480 @@ class AppMetaCompanion extends UpdateCompanion<AppMetaData> {
   }
 }
 
+class $CycleTemplateTable extends CycleTemplate
+    with TableInfo<$CycleTemplateTable, CycleTemplateData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CycleTemplateTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dayIndexMeta =
+      const VerificationMeta('dayIndex');
+  @override
+  late final GeneratedColumn<int> dayIndex = GeneratedColumn<int>(
+      'day_index', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _exerciseIdMeta =
+      const VerificationMeta('exerciseId');
+  @override
+  late final GeneratedColumn<int> exerciseId = GeneratedColumn<int>(
+      'exercise_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  @override
+  List<GeneratedColumn> get $columns => [dayIndex, exerciseId, sortOrder];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cycle_template';
+  @override
+  VerificationContext validateIntegrity(Insertable<CycleTemplateData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('day_index')) {
+      context.handle(_dayIndexMeta,
+          dayIndex.isAcceptableOrUnknown(data['day_index']!, _dayIndexMeta));
+    } else if (isInserting) {
+      context.missing(_dayIndexMeta);
+    }
+    if (data.containsKey('exercise_id')) {
+      context.handle(
+          _exerciseIdMeta,
+          exerciseId.isAcceptableOrUnknown(
+              data['exercise_id']!, _exerciseIdMeta));
+    } else if (isInserting) {
+      context.missing(_exerciseIdMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {dayIndex, exerciseId};
+  @override
+  CycleTemplateData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CycleTemplateData(
+      dayIndex: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}day_index'])!,
+      exerciseId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}exercise_id'])!,
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+    );
+  }
+
+  @override
+  $CycleTemplateTable createAlias(String alias) {
+    return $CycleTemplateTable(attachedDatabase, alias);
+  }
+}
+
+class CycleTemplateData extends DataClass
+    implements Insertable<CycleTemplateData> {
+  final int dayIndex;
+  final int exerciseId;
+  final int sortOrder;
+  const CycleTemplateData(
+      {required this.dayIndex,
+      required this.exerciseId,
+      required this.sortOrder});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['day_index'] = Variable<int>(dayIndex);
+    map['exercise_id'] = Variable<int>(exerciseId);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  CycleTemplateCompanion toCompanion(bool nullToAbsent) {
+    return CycleTemplateCompanion(
+      dayIndex: Value(dayIndex),
+      exerciseId: Value(exerciseId),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory CycleTemplateData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CycleTemplateData(
+      dayIndex: serializer.fromJson<int>(json['dayIndex']),
+      exerciseId: serializer.fromJson<int>(json['exerciseId']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'dayIndex': serializer.toJson<int>(dayIndex),
+      'exerciseId': serializer.toJson<int>(exerciseId),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  CycleTemplateData copyWith(
+          {int? dayIndex, int? exerciseId, int? sortOrder}) =>
+      CycleTemplateData(
+        dayIndex: dayIndex ?? this.dayIndex,
+        exerciseId: exerciseId ?? this.exerciseId,
+        sortOrder: sortOrder ?? this.sortOrder,
+      );
+  CycleTemplateData copyWithCompanion(CycleTemplateCompanion data) {
+    return CycleTemplateData(
+      dayIndex: data.dayIndex.present ? data.dayIndex.value : this.dayIndex,
+      exerciseId:
+          data.exerciseId.present ? data.exerciseId.value : this.exerciseId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CycleTemplateData(')
+          ..write('dayIndex: $dayIndex, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(dayIndex, exerciseId, sortOrder);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CycleTemplateData &&
+          other.dayIndex == this.dayIndex &&
+          other.exerciseId == this.exerciseId &&
+          other.sortOrder == this.sortOrder);
+}
+
+class CycleTemplateCompanion extends UpdateCompanion<CycleTemplateData> {
+  final Value<int> dayIndex;
+  final Value<int> exerciseId;
+  final Value<int> sortOrder;
+  final Value<int> rowid;
+  const CycleTemplateCompanion({
+    this.dayIndex = const Value.absent(),
+    this.exerciseId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CycleTemplateCompanion.insert({
+    required int dayIndex,
+    required int exerciseId,
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : dayIndex = Value(dayIndex),
+        exerciseId = Value(exerciseId);
+  static Insertable<CycleTemplateData> custom({
+    Expression<int>? dayIndex,
+    Expression<int>? exerciseId,
+    Expression<int>? sortOrder,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (dayIndex != null) 'day_index': dayIndex,
+      if (exerciseId != null) 'exercise_id': exerciseId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CycleTemplateCompanion copyWith(
+      {Value<int>? dayIndex,
+      Value<int>? exerciseId,
+      Value<int>? sortOrder,
+      Value<int>? rowid}) {
+    return CycleTemplateCompanion(
+      dayIndex: dayIndex ?? this.dayIndex,
+      exerciseId: exerciseId ?? this.exerciseId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (dayIndex.present) {
+      map['day_index'] = Variable<int>(dayIndex.value);
+    }
+    if (exerciseId.present) {
+      map['exercise_id'] = Variable<int>(exerciseId.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CycleTemplateCompanion(')
+          ..write('dayIndex: $dayIndex, ')
+          ..write('exerciseId: $exerciseId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CycleDailySelectionTable extends CycleDailySelection
+    with TableInfo<$CycleDailySelectionTable, CycleDailySelectionData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CycleDailySelectionTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+      'date', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _dayIndexMeta =
+      const VerificationMeta('dayIndex');
+  @override
+  late final GeneratedColumn<int> dayIndex = GeneratedColumn<int>(
+      'day_index', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [date, kind, dayIndex];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cycle_daily_selection';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<CycleDailySelectionData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('day_index')) {
+      context.handle(_dayIndexMeta,
+          dayIndex.isAcceptableOrUnknown(data['day_index']!, _dayIndexMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {date};
+  @override
+  CycleDailySelectionData map(Map<String, dynamic> data,
+      {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CycleDailySelectionData(
+      date: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}date'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      dayIndex: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}day_index']),
+    );
+  }
+
+  @override
+  $CycleDailySelectionTable createAlias(String alias) {
+    return $CycleDailySelectionTable(attachedDatabase, alias);
+  }
+}
+
+class CycleDailySelectionData extends DataClass
+    implements Insertable<CycleDailySelectionData> {
+  final String date;
+  final String kind;
+  final int? dayIndex;
+  const CycleDailySelectionData(
+      {required this.date, required this.kind, this.dayIndex});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['date'] = Variable<String>(date);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || dayIndex != null) {
+      map['day_index'] = Variable<int>(dayIndex);
+    }
+    return map;
+  }
+
+  CycleDailySelectionCompanion toCompanion(bool nullToAbsent) {
+    return CycleDailySelectionCompanion(
+      date: Value(date),
+      kind: Value(kind),
+      dayIndex: dayIndex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dayIndex),
+    );
+  }
+
+  factory CycleDailySelectionData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CycleDailySelectionData(
+      date: serializer.fromJson<String>(json['date']),
+      kind: serializer.fromJson<String>(json['kind']),
+      dayIndex: serializer.fromJson<int?>(json['dayIndex']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'date': serializer.toJson<String>(date),
+      'kind': serializer.toJson<String>(kind),
+      'dayIndex': serializer.toJson<int?>(dayIndex),
+    };
+  }
+
+  CycleDailySelectionData copyWith(
+          {String? date,
+          String? kind,
+          Value<int?> dayIndex = const Value.absent()}) =>
+      CycleDailySelectionData(
+        date: date ?? this.date,
+        kind: kind ?? this.kind,
+        dayIndex: dayIndex.present ? dayIndex.value : this.dayIndex,
+      );
+  CycleDailySelectionData copyWithCompanion(CycleDailySelectionCompanion data) {
+    return CycleDailySelectionData(
+      date: data.date.present ? data.date.value : this.date,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      dayIndex: data.dayIndex.present ? data.dayIndex.value : this.dayIndex,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CycleDailySelectionData(')
+          ..write('date: $date, ')
+          ..write('kind: $kind, ')
+          ..write('dayIndex: $dayIndex')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(date, kind, dayIndex);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CycleDailySelectionData &&
+          other.date == this.date &&
+          other.kind == this.kind &&
+          other.dayIndex == this.dayIndex);
+}
+
+class CycleDailySelectionCompanion
+    extends UpdateCompanion<CycleDailySelectionData> {
+  final Value<String> date;
+  final Value<String> kind;
+  final Value<int?> dayIndex;
+  final Value<int> rowid;
+  const CycleDailySelectionCompanion({
+    this.date = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.dayIndex = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CycleDailySelectionCompanion.insert({
+    required String date,
+    required String kind,
+    this.dayIndex = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : date = Value(date),
+        kind = Value(kind);
+  static Insertable<CycleDailySelectionData> custom({
+    Expression<String>? date,
+    Expression<String>? kind,
+    Expression<int>? dayIndex,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (date != null) 'date': date,
+      if (kind != null) 'kind': kind,
+      if (dayIndex != null) 'day_index': dayIndex,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CycleDailySelectionCompanion copyWith(
+      {Value<String>? date,
+      Value<String>? kind,
+      Value<int?>? dayIndex,
+      Value<int>? rowid}) {
+    return CycleDailySelectionCompanion(
+      date: date ?? this.date,
+      kind: kind ?? this.kind,
+      dayIndex: dayIndex ?? this.dayIndex,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (dayIndex.present) {
+      map['day_index'] = Variable<int>(dayIndex.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CycleDailySelectionCompanion(')
+          ..write('date: $date, ')
+          ..write('kind: $kind, ')
+          ..write('dayIndex: $dayIndex, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1537,12 +2011,22 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CatalogExercisesTable catalogExercises =
       $CatalogExercisesTable(this);
   late final $AppMetaTable appMeta = $AppMetaTable(this);
+  late final $CycleTemplateTable cycleTemplate = $CycleTemplateTable(this);
+  late final $CycleDailySelectionTable cycleDailySelection =
+      $CycleDailySelectionTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [exercises, weekTemplate, trainingRecord, catalogExercises, appMeta];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        exercises,
+        weekTemplate,
+        trainingRecord,
+        catalogExercises,
+        appMeta,
+        cycleTemplate,
+        cycleDailySelection
+      ];
 }
 
 typedef $$ExercisesTableCreateCompanionBuilder = ExercisesCompanion Function({
@@ -2376,6 +2860,297 @@ typedef $$AppMetaTableProcessedTableManager = ProcessedTableManager<
     (AppMetaData, BaseReferences<_$AppDatabase, $AppMetaTable, AppMetaData>),
     AppMetaData,
     PrefetchHooks Function()>;
+typedef $$CycleTemplateTableCreateCompanionBuilder = CycleTemplateCompanion
+    Function({
+  required int dayIndex,
+  required int exerciseId,
+  Value<int> sortOrder,
+  Value<int> rowid,
+});
+typedef $$CycleTemplateTableUpdateCompanionBuilder = CycleTemplateCompanion
+    Function({
+  Value<int> dayIndex,
+  Value<int> exerciseId,
+  Value<int> sortOrder,
+  Value<int> rowid,
+});
+
+class $$CycleTemplateTableFilterComposer
+    extends Composer<_$AppDatabase, $CycleTemplateTable> {
+  $$CycleTemplateTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get dayIndex => $composableBuilder(
+      column: $table.dayIndex, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get exerciseId => $composableBuilder(
+      column: $table.exerciseId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+}
+
+class $$CycleTemplateTableOrderingComposer
+    extends Composer<_$AppDatabase, $CycleTemplateTable> {
+  $$CycleTemplateTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get dayIndex => $composableBuilder(
+      column: $table.dayIndex, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get exerciseId => $composableBuilder(
+      column: $table.exerciseId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CycleTemplateTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CycleTemplateTable> {
+  $$CycleTemplateTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get dayIndex =>
+      $composableBuilder(column: $table.dayIndex, builder: (column) => column);
+
+  GeneratedColumn<int> get exerciseId => $composableBuilder(
+      column: $table.exerciseId, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+}
+
+class $$CycleTemplateTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CycleTemplateTable,
+    CycleTemplateData,
+    $$CycleTemplateTableFilterComposer,
+    $$CycleTemplateTableOrderingComposer,
+    $$CycleTemplateTableAnnotationComposer,
+    $$CycleTemplateTableCreateCompanionBuilder,
+    $$CycleTemplateTableUpdateCompanionBuilder,
+    (
+      CycleTemplateData,
+      BaseReferences<_$AppDatabase, $CycleTemplateTable, CycleTemplateData>
+    ),
+    CycleTemplateData,
+    PrefetchHooks Function()> {
+  $$CycleTemplateTableTableManager(_$AppDatabase db, $CycleTemplateTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CycleTemplateTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CycleTemplateTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CycleTemplateTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> dayIndex = const Value.absent(),
+            Value<int> exerciseId = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CycleTemplateCompanion(
+            dayIndex: dayIndex,
+            exerciseId: exerciseId,
+            sortOrder: sortOrder,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int dayIndex,
+            required int exerciseId,
+            Value<int> sortOrder = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CycleTemplateCompanion.insert(
+            dayIndex: dayIndex,
+            exerciseId: exerciseId,
+            sortOrder: sortOrder,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$CycleTemplateTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CycleTemplateTable,
+    CycleTemplateData,
+    $$CycleTemplateTableFilterComposer,
+    $$CycleTemplateTableOrderingComposer,
+    $$CycleTemplateTableAnnotationComposer,
+    $$CycleTemplateTableCreateCompanionBuilder,
+    $$CycleTemplateTableUpdateCompanionBuilder,
+    (
+      CycleTemplateData,
+      BaseReferences<_$AppDatabase, $CycleTemplateTable, CycleTemplateData>
+    ),
+    CycleTemplateData,
+    PrefetchHooks Function()>;
+typedef $$CycleDailySelectionTableCreateCompanionBuilder
+    = CycleDailySelectionCompanion Function({
+  required String date,
+  required String kind,
+  Value<int?> dayIndex,
+  Value<int> rowid,
+});
+typedef $$CycleDailySelectionTableUpdateCompanionBuilder
+    = CycleDailySelectionCompanion Function({
+  Value<String> date,
+  Value<String> kind,
+  Value<int?> dayIndex,
+  Value<int> rowid,
+});
+
+class $$CycleDailySelectionTableFilterComposer
+    extends Composer<_$AppDatabase, $CycleDailySelectionTable> {
+  $$CycleDailySelectionTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get dayIndex => $composableBuilder(
+      column: $table.dayIndex, builder: (column) => ColumnFilters(column));
+}
+
+class $$CycleDailySelectionTableOrderingComposer
+    extends Composer<_$AppDatabase, $CycleDailySelectionTable> {
+  $$CycleDailySelectionTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get dayIndex => $composableBuilder(
+      column: $table.dayIndex, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CycleDailySelectionTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CycleDailySelectionTable> {
+  $$CycleDailySelectionTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get dayIndex =>
+      $composableBuilder(column: $table.dayIndex, builder: (column) => column);
+}
+
+class $$CycleDailySelectionTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CycleDailySelectionTable,
+    CycleDailySelectionData,
+    $$CycleDailySelectionTableFilterComposer,
+    $$CycleDailySelectionTableOrderingComposer,
+    $$CycleDailySelectionTableAnnotationComposer,
+    $$CycleDailySelectionTableCreateCompanionBuilder,
+    $$CycleDailySelectionTableUpdateCompanionBuilder,
+    (
+      CycleDailySelectionData,
+      BaseReferences<_$AppDatabase, $CycleDailySelectionTable,
+          CycleDailySelectionData>
+    ),
+    CycleDailySelectionData,
+    PrefetchHooks Function()> {
+  $$CycleDailySelectionTableTableManager(
+      _$AppDatabase db, $CycleDailySelectionTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CycleDailySelectionTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CycleDailySelectionTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CycleDailySelectionTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> date = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<int?> dayIndex = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CycleDailySelectionCompanion(
+            date: date,
+            kind: kind,
+            dayIndex: dayIndex,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String date,
+            required String kind,
+            Value<int?> dayIndex = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CycleDailySelectionCompanion.insert(
+            date: date,
+            kind: kind,
+            dayIndex: dayIndex,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$CycleDailySelectionTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CycleDailySelectionTable,
+    CycleDailySelectionData,
+    $$CycleDailySelectionTableFilterComposer,
+    $$CycleDailySelectionTableOrderingComposer,
+    $$CycleDailySelectionTableAnnotationComposer,
+    $$CycleDailySelectionTableCreateCompanionBuilder,
+    $$CycleDailySelectionTableUpdateCompanionBuilder,
+    (
+      CycleDailySelectionData,
+      BaseReferences<_$AppDatabase, $CycleDailySelectionTable,
+          CycleDailySelectionData>
+    ),
+    CycleDailySelectionData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2390,4 +3165,8 @@ class $AppDatabaseManager {
       $$CatalogExercisesTableTableManager(_db, _db.catalogExercises);
   $$AppMetaTableTableManager get appMeta =>
       $$AppMetaTableTableManager(_db, _db.appMeta);
+  $$CycleTemplateTableTableManager get cycleTemplate =>
+      $$CycleTemplateTableTableManager(_db, _db.cycleTemplate);
+  $$CycleDailySelectionTableTableManager get cycleDailySelection =>
+      $$CycleDailySelectionTableTableManager(_db, _db.cycleDailySelection);
 }

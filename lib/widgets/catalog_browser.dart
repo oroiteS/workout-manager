@@ -8,16 +8,17 @@ import 'package:workout_manager/providers/workout_providers.dart';
 import 'package:workout_manager/widgets/catalog_browser_mode.dart';
 import 'package:workout_manager/widgets/catalog_detail_page.dart';
 import 'package:workout_manager/widgets/catalog_filter_sheets.dart';
+import 'package:workout_manager/widgets/pick_target.dart';
 
 class CatalogBrowser extends ConsumerStatefulWidget {
   final CatalogBrowserMode mode;
-  final int? dayOfWeek;
+  final PickTarget? pickTarget;
   final void Function(CatalogExercise ex)? onAdded;
 
   const CatalogBrowser({
     super.key,
     this.mode = CatalogBrowserMode.browse,
-    this.dayOfWeek,
+    this.pickTarget,
     this.onAdded,
   });
 
@@ -67,15 +68,16 @@ class _CatalogBrowserState extends ConsumerState<CatalogBrowser> {
   }
 
   Future<void> _addExercise(CatalogExercise ex) async {
-    final day = widget.dayOfWeek;
-    assert(day != null, 'CatalogBrowserMode.pick requires dayOfWeek');
-    if (day == null) return;
+    final target = widget.pickTarget;
+    assert(target != null, 'CatalogBrowserMode.pick requires pickTarget');
+    if (target == null) return;
     try {
-      final db = ref.read(databaseProvider);
-      await db.templateDao.addExercise(day, ex.nameZh, datasetId: ex.datasetId);
-      ref.invalidate(templateProvider);
-      ref.invalidate(templateByDayProvider(day));
-      ref.invalidate(todayExercisesProvider);
+      await addExerciseToTarget(
+        ref,
+        target,
+        ex.nameZh,
+        datasetId: ex.datasetId,
+      );
       widget.onAdded?.call(ex);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,7 +99,7 @@ class _CatalogBrowserState extends ConsumerState<CatalogBrowser> {
         builder: (_) => CatalogDetailPage(
           exercise: ex,
           mode: widget.mode,
-          dayOfWeek: widget.dayOfWeek,
+          pickTarget: widget.pickTarget,
           onAdded: widget.onAdded,
         ),
       ),

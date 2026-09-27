@@ -4,10 +4,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workout_manager/plan/plan_import.dart';
+import 'package:workout_manager/database/database.dart';
 import 'package:workout_manager/providers/workout_providers.dart';
-import 'package:workout_manager/widgets/catalog_browser.dart';
-import 'package:workout_manager/widgets/catalog_browser_mode.dart';
+import 'package:workout_manager/widgets/cycle_template_editor.dart';
 import 'package:workout_manager/widgets/day_template_card.dart';
+import 'package:workout_manager/widgets/exercise_add_flow.dart';
+import 'package:workout_manager/widgets/pick_target.dart';
 
 const _dayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
@@ -17,10 +19,12 @@ class TemplateScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final templateAsync = ref.watch(templateProvider);
+    final modeAsync = ref.watch(planModeProvider);
+    final isCycle = modeAsync.valueOrNull == PlanMode.cycle;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('周训练模板'),
+        title: Text(isCycle ? '循环模板' : '周训练模板'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -43,46 +47,112 @@ class TemplateScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: templateAsync.when(
+      body: modeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('加载失败: $e')),
-        data: (allTemplates) {
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: 7,
-            itemBuilder: (context, index) {
-              final day = index + 1;
-              final dayExercises = allTemplates
-                  .where((t) => t.dayOfWeek == day)
-                  .map((t) => (exerciseId: t.exerciseId, exerciseName: t.exerciseName))
-                  .toList();
-
-              return DayTemplateCard(
-                dayLabel: _dayLabels[index],
-                dayOfWeek: day,
-                exercises: dayExercises,
-                onAdd: () => _onAdd(context, ref, day, _dayLabels[index]),
-                onDelete: (exerciseId, exerciseName) async {
-                  try {
-                    final db = ref.read(databaseProvider);
-                    await db.templateDao.deleteExercise(day, exerciseId);
-                    ref.invalidate(templateProvider);
-                    ref.invalidate(templateByDayProvider(day));
-                    ref.invalidate(todayExercisesProvider);
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
-                      );
-                    }
-                  }
-                },
-              );
-            },
-          );
-        },
+        data: (mode) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+              child: SegmentedButton<PlanMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: PlanMode.weekly,
+                    label: Text('计划模式'),
+                    icon: Icon(Icons.calendar_month_outlined, size: 18),
+                  ),
+                  ButtonSegment(
+                    value: PlanMode.cycle,
+                    label: Text('循环模式'),
+                    icon: Icon(Icons.repeat, size: 18),
+                  ),
+                ],
+                selected: {mode},
+                showSelectedIcon: false,
+                onSelectionChanged: (selection) =>
+                    _switchMode(context, ref, selection.first),
+              ),
+            ),
+            Expanded(
+              child: mode == PlanMode.cycle
+                  ? const CycleTemplateEditor()
+                  : _buildWeeklyList(context, ref, templateAsync),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildWeeklyList(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<TemplateWithExercise>> templateAsync,
+  ) {
+    return templateAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('加载失败: $e')),
+      data: (allTemplates) {
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: 7,
+          itemBuilder: (context, index) {
+            final day = index + 1;
+            final dayExercises = allTemplates
+                .where((t) => t.dayOfWeek == day)
+                .map((t) => (exerciseId: t.exerciseId, exerciseName: t.exerciseName))
+                .toList();
+
+            return DayTemplateCard(
+              dayLabel: _dayLabels[index],
+              dayOfWeek: day,
+              exercises: dayExercises,
+              onAdd: () => showAddExerciseFlow(
+                context,
+                ref,
+                pickTarget: WeekPickTarget(day),
+                dayLabel: _dayLabels[index],
+              ),
+              onDelete: (exerciseId, exerciseName) async {
+                try {
+                  final db = ref.read(databaseProvider);
+                  await db.templateDao.deleteExercise(day, exerciseId);
+                  ref.invalidate(templateProvider);
+                  ref.invalidate(templateByDayProvider(day));
+                  ref.invalidate(todayExercisesProvider);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _switchMode(
+    BuildContext context,
+    WidgetRef ref,
+    PlanMode mode,
+  ) async {
+    final db = ref.read(databaseProvider);
+    try {
+      await db.cycleDao.setPlanMode(mode);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('切换模式失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+    ref.invalidate(planModeProvider);
+    ref.invalidate(cycleTodayStateProvider);
   }
 
   Future<void> _importCsv(BuildContext context, WidgetRef ref) async {
@@ -99,9 +169,18 @@ class TemplateScreen extends ConsumerWidget {
       return;
     }
 
+    final isCycle = ref.read(planModeProvider).valueOrNull == PlanMode.cycle;
+
     final ParsedPlan plan;
     try {
-      plan = parsePlanCsv(await File(path).readAsString());
+      final raw = await File(path).readAsString();
+      plan = isCycle
+          ? parsePlanCsv(
+              raw,
+              dayCount: await ref.read(cycleDayCountProvider.future),
+              cycle: true,
+            )
+          : parsePlanCsv(raw);
     } on PlanCsvException catch (e) {
       if (!context.mounted) return;
       _showSnack(context, '解析失败: ${e.message}');
@@ -114,7 +193,9 @@ class TemplateScreen extends ConsumerWidget {
     if (!context.mounted) return;
 
     final db = ref.read(databaseProvider);
-    final current = await db.templateDao.getAll();
+    final current = isCycle
+        ? await db.cycleDao.getAll()
+        : await db.templateDao.getAll();
     if (!context.mounted) return;
 
     final diff = buildPlanDiff(
@@ -131,12 +212,16 @@ class TemplateScreen extends ConsumerWidget {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => _buildDiffDialog(ctx, diff),
+      builder: (ctx) => _buildDiffDialog(ctx, diff, cycle: isCycle),
     );
     if (confirmed != true || !context.mounted) return;
 
     try {
-      await db.templateDao.replaceAll(plan.exercisesByDay);
+      if (isCycle) {
+        await db.cycleDao.replaceAll(plan.exercisesByDay);
+      } else {
+        await db.templateDao.replaceAll(plan.exercisesByDay);
+      }
     } catch (e) {
       if (!context.mounted) return;
       _showSnack(context, '导入失败: $e');
@@ -144,16 +229,28 @@ class TemplateScreen extends ConsumerWidget {
     }
     if (!context.mounted) return;
 
-    ref.invalidate(templateProvider);
-    ref.invalidate(templateByDayProvider);
-    ref.invalidate(todayExercisesProvider);
-    ref.invalidate(allExercisesProvider);
+    if (isCycle) {
+      ref.invalidate(cycleTemplateProvider);
+      ref.invalidate(cycleByDayProvider);
+      ref.invalidate(cycleTodayStateProvider);
+      ref.invalidate(allExercisesProvider);
+    } else {
+      ref.invalidate(templateProvider);
+      ref.invalidate(templateByDayProvider);
+      ref.invalidate(todayExercisesProvider);
+      ref.invalidate(allExercisesProvider);
+    }
     _showSnack(context, '已导入 ${plan.exerciseCount} 个动作');
   }
 
-  Widget _buildDiffDialog(BuildContext context, PlanDiff diff) {
+  String _dayLabel(int day, {required bool cycle}) =>
+      cycle ? '第$day天' : _dayLabels[day - 1];
+
+  Widget _buildDiffDialog(BuildContext context, PlanDiff diff,
+      {required bool cycle}) {
+    String label(int day) => _dayLabel(day, cycle: cycle);
     return AlertDialog(
-      title: const Text('导入周计划'),
+      title: Text(cycle ? '导入循环计划' : '导入周计划'),
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
@@ -164,11 +261,13 @@ class TemplateScreen extends ConsumerWidget {
               Text(
                 'CSV 共 ${diff.exerciseCount} 个动作，'
                 '新增 ${diff.totalAdded}、移除 ${diff.totalRemoved}，'
-                '将替换整个周计划。',
+                '将替换整个${cycle ? '循环计划' : '周计划'}。',
               ),
               const SizedBox(height: 6),
               Text(
-                '只改周计划，不会删除任何训练记录。',
+                cycle
+                    ? '只改循环模板，不会删除任何训练记录与每日选择。'
+                    : '只改周计划，不会删除任何训练记录。',
                 style: TextStyle(
                   fontSize: 13,
                   color: Theme.of(context).colorScheme.primary,
@@ -178,7 +277,7 @@ class TemplateScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   '以下 ${diff.clearedDays.length} 天将被清空：'
-                  '${diff.clearedDays.map((d) => _dayLabels[d - 1]).join('、')}',
+                  '${diff.clearedDays.map(label).join('、')}',
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.error,
@@ -188,7 +287,7 @@ class TemplateScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               for (final d in diff.days) ...[
                 Text(
-                  _dayLabels[d.day - 1],
+                  label(d.day),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 if (d.kept.isNotEmpty)
@@ -234,144 +333,5 @@ class TemplateScreen extends ConsumerWidget {
   void _showSnack(BuildContext context, String message) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _onAdd(
-    BuildContext context,
-    WidgetRef ref,
-    int day,
-    String dayLabel,
-  ) async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.fitness_center),
-              title: const Text('从动作库选择'),
-              onTap: () => Navigator.pop(ctx, 'catalog'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('自定义名称'),
-              onTap: () => Navigator.pop(ctx, 'custom'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (!context.mounted || choice == null) return;
-
-    if (choice == 'catalog') {
-      final previousQuery = ref.read(catalogQueryProvider);
-      ref.read(catalogQueryProvider.notifier).state = CatalogQuery.empty();
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(
-              title: const Text('从动作库选择'),
-            ),
-            body: CatalogBrowser(
-              mode: CatalogBrowserMode.pick,
-              dayOfWeek: day,
-            ),
-          ),
-        ),
-      );
-      ref.read(catalogQueryProvider.notifier).state = previousQuery;
-      return;
-    }
-
-    if (choice == 'custom') {
-      await _addCustom(context, ref, day, dayLabel);
-    }
-  }
-
-  Future<void> _addCustom(
-    BuildContext context,
-    WidgetRef ref,
-    int day,
-    String dayLabel,
-  ) async {
-    String prefill = '';
-    while (true) {
-      if (!context.mounted) return;
-      final controller = TextEditingController(text: prefill);
-      final name = await showDialog<String>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('为$dayLabel添加动作'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: '动作名称',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final text = controller.text.trim();
-                if (text.isNotEmpty) Navigator.pop(ctx, text);
-              },
-              child: const Text('添加'),
-            ),
-          ],
-        ),
-      );
-      controller.dispose();
-      if (name == null || name.isEmpty || !context.mounted) return;
-
-      try {
-        final db = ref.read(databaseProvider);
-        final hit = await db.catalogDao.findByNameZh(name);
-        if (hit != null) {
-          if (!context.mounted) return;
-          final ok = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('合并动作'),
-              content: Text('库中已有「$name」，合并并显示示意图？'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('取消'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('合并'),
-                ),
-              ],
-            ),
-          );
-          if (ok != true) {
-            prefill = name;
-            continue;
-          }
-          await db.templateDao.addExercise(day, hit.nameZh, datasetId: hit.datasetId);
-        } else {
-          await db.templateDao.addExercise(day, name, datasetId: null);
-        }
-        ref.invalidate(templateProvider);
-        ref.invalidate(templateByDayProvider(day));
-        ref.invalidate(todayExercisesProvider);
-        return;
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('添加失败: $e'), backgroundColor: Colors.red),
-          );
-        }
-        return;
-      }
-    }
   }
 }

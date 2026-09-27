@@ -130,6 +130,67 @@ void main() {
     });
   });
 
+  group('parsePlanCsv 循环模式', () {
+    test('接受 1..N 与「第N天」，missingDays 按循环天数', () {
+      final plan = parsePlanCsv(
+        'day,exercise\n'
+        '1,卧推\n'
+        '第2天,划船\n'
+        '3,卷腹\n',
+        dayCount: 3,
+        cycle: true,
+      );
+
+      expect(plan.exercisesByDay.keys, [1, 2, 3]);
+      expect(plan.exercisesByDay[2], ['划船']);
+      expect(plan.dayCount, 3);
+      expect(plan.missingDays, isEmpty);
+    });
+
+    test('未覆盖的天按 N 计算', () {
+      final plan = parsePlanCsv('1,卧推\n', dayCount: 3, cycle: true);
+      expect(plan.missingDays, [2, 3]);
+    });
+
+    test('超出循环天数的数字报错', () {
+      expect(
+        () => parsePlanCsv('1,卧推\n4,划船\n', dayCount: 3, cycle: true),
+        throwsA(
+          isA<PlanCsvException>()
+              .having((e) => e.message, 'message', contains('第 2 行'))
+              .having((e) => e.message, 'message', contains('1-3')),
+        ),
+      );
+    });
+
+    test('星期标签明确报错，提示切换计划模式', () {
+      expect(
+        () => parsePlanCsv('1,卧推\n周二,划船\n', dayCount: 3, cycle: true),
+        throwsA(
+          isA<PlanCsvException>()
+              .having((e) => e.message, 'message', contains('第 2 行'))
+              .having((e) => e.message, 'message', contains('循环模式不支持'))
+              .having((e) => e.message, 'message', contains('切换到计划模式')),
+        ),
+      );
+    });
+
+    test('首行就是星期标签时不被当作表头吞掉', () {
+      expect(
+        () => parsePlanCsv('周一,卧推\n2,划船\n', dayCount: 3, cycle: true),
+        throwsA(
+          isA<PlanCsvException>()
+              .having((e) => e.message, 'message', contains('循环模式不支持')),
+        ),
+      );
+    });
+
+    test('计划模式下「第N天」也按天数解析', () {
+      final plan = parsePlanCsv('第1天,卧推\n第7天,卷腹\n');
+      expect(plan.exercisesByDay.keys, [1, 7]);
+    });
+  });
+
   group('buildPlanDiff', () {
     final current = [
       (dayOfWeek: 1, exerciseName: '卧推'),

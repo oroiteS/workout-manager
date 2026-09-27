@@ -9,11 +9,13 @@ import 'exercise_dao.dart';
 import 'template_dao.dart';
 import 'record_dao.dart';
 import 'catalog_dao.dart';
+import 'cycle_dao.dart';
 
 export 'exercise_dao.dart';
 export 'template_dao.dart';
 export 'record_dao.dart';
 export 'catalog_dao.dart';
+export 'cycle_dao.dart';
 
 part 'database.g.dart';
 
@@ -65,21 +67,69 @@ class AppMeta extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+class CycleTemplate extends Table {
+  IntColumn get dayIndex => integer()();
+  IntColumn get exerciseId => integer()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {dayIndex, exerciseId};
+}
+
+class CycleDailySelection extends Table {
+  TextColumn get date => text()();
+  TextColumn get kind => text()();
+  IntColumn get dayIndex => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {date};
+}
+
 @DriftDatabase(
-  tables: [Exercises, WeekTemplate, TrainingRecord, CatalogExercises, AppMeta],
+  tables: [
+    Exercises,
+    WeekTemplate,
+    TrainingRecord,
+    CatalogExercises,
+    AppMeta,
+    CycleTemplate,
+    CycleDailySelection,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openDatabase());
 
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
+  /// 测试用：指定底层执行器（如模拟旧版本数据库执行升级）。
+  AppDatabase.forTestingOn(super.executor);
+
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 3) {
+            // v1/v2 表结构与现行差异过大，且自 app v2 起就无法打开，
+            // 不再支持自动迁移：指引用对应旧版本导出备份后导入恢复。
+            throw Exception(
+              '数据库版本过旧（v1/v2），无法自动升级。'
+              '请用对应的旧版本导出备份后，在当前版本导入恢复。',
+            );
+          }
+          // v3 → v4：仅新增循环两张表。
+          await m.createTable(cycleTemplate);
+          await m.createTable(cycleDailySelection);
+        },
+      );
 
   ExerciseDao get exerciseDao => ExerciseDao(this);
   TemplateDao get templateDao => TemplateDao(this);
   RecordDao get recordDao => RecordDao(this);
   CatalogDao get catalogDao => CatalogDao(this);
+  CycleDao get cycleDao => CycleDao(this);
 }
 
 AppDatabase createMemoryDb() {

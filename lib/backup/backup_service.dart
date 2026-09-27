@@ -12,6 +12,10 @@ class BackupService {
     final exercises = await db.exerciseDao.getAll();
     final templates = await db.templateDao.getAll();
     final allRecords = await db.recordDao.getAllForBackup();
+    final cycleRows = await db.cycleDao.getAll();
+    final cycleSelections = await db.cycleDao.getAllSelections();
+    final planMode = await db.cycleDao.getPlanMode();
+    final dayCount = await db.cycleDao.getDayCount();
 
     final now = DateTime.now();
     final exercisesRows = exercises
@@ -45,6 +49,26 @@ class BackupService {
         )
         .toList();
 
+    final cycleRowsOut = cycleRows
+        .map(
+          (t) => CycleTemplateRowData(
+            dayIndex: t.dayOfWeek,
+            exerciseId: t.exerciseId,
+            sortOrder: t.sortOrder,
+          ),
+        )
+        .toList();
+
+    final selectionRows = cycleSelections
+        .map(
+          (s) => CycleSelectionRowData(
+            date: s.date,
+            kind: s.kind.name,
+            dayIndex: s.dayIndex,
+          ),
+        )
+        .toList();
+
     final backup = BackupFile(
       exportedAt: now.toUtc().toIso8601String(),
       appVersion: '1.3.0+17',
@@ -52,6 +76,12 @@ class BackupService {
         exercises: exercisesRows,
         weekTemplate: templateRows,
         trainingRecords: recordRows,
+        cycleTemplate: cycleRowsOut,
+        cycleSelections: selectionRows,
+        cycleSettings: CycleSettingsData(
+          planMode: planMode.name,
+          dayCount: dayCount,
+        ),
       ),
     );
 
@@ -76,6 +106,9 @@ class BackupService {
       await db.recordDao.deleteAll();
       await db.templateDao.deleteAll();
       await db.exerciseDao.deleteAll();
+      await db.cycleDao.deleteAll();
+      await db.cycleDao.deleteAllSelections();
+      await db.cycleDao.clearSettings();
 
       for (final e in backup.data.exercises) {
         await db.exerciseDao.insertWithId(e.toCompanion());
@@ -90,6 +123,24 @@ class BackupService {
           weight: r.weight,
           trainedAt: DateTime.parse(r.trainedAt),
         );
+      }
+      for (final t in backup.data.cycleTemplate) {
+        await db.cycleDao.insertFromBackup(t.toCompanion());
+      }
+      for (final s in backup.data.cycleSelections) {
+        await db.cycleDao.setSelection(CycleSelection(
+          date: s.date,
+          kind: CycleSelectionKind.values.asNameMap()[s.kind]!,
+          dayIndex: s.dayIndex,
+        ));
+      }
+      final settings = backup.data.cycleSettings;
+      if (settings != null) {
+        await db.cycleDao
+            .setPlanMode(PlanMode.values.asNameMap()[settings.planMode]!);
+        if (settings.dayCount != null) {
+          await db.cycleDao.setDayCount(settings.dayCount!);
+        }
       }
     });
   }
