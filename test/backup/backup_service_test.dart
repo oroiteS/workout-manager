@@ -22,7 +22,7 @@ void main() {
 
     expect(map['format'], BackupFile.format);
     expect(map['version'], BackupFile.version);
-    expect(map['appVersion'], '1.3.0+17');
+    expect(map['appVersion'], '1.4.0+18');
     expect(map['exportedAt'], isA<String>());
 
     final data = map['data'] as Map<String, dynamic>;

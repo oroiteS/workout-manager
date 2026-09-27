@@ -219,7 +219,7 @@ class _TodayTrainingScreenState extends ConsumerState<TodayTrainingScreen> {
           ),
           const Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Center(child: Text('v1.3.0', style: TextStyle(fontSize: 12, color: Colors.grey))),
+            child: Center(child: Text('v1.4.0', style: TextStyle(fontSize: 12, color: Colors.grey))),
           ),
         ],
       ),
