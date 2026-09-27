@@ -60,3 +60,6 @@ exercises-dataset/
 
 # Git worktrees
 .worktrees/
+
+# 本地计划 CSV 样本（不入库）
+plan_csv/
